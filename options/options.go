@@ -50,7 +50,6 @@ type Options struct {
 	CommitUrlTemplate   string `mapstructure:"commitUrlTemplate"`
 	DefaultBranch       string `mapstructure:"defaultBranch"`
 	Dir                 string `mapstructure:"dir" yaml:"-"`
-	HunkUrlTemplate     string `mapstructure:"hunkUrlTemplate"`
 	OutDir              string `mapstructure:"outDir"`
 	EnvironmentID       string `mapstructure:"environmentId"`
 	RepoOwner           string `mapstructure:"repoOwner"`
@@ -61,7 +60,6 @@ type Options struct {
 	Subdirectory        string `mapstructure:"subdirectory"`
 	UserAgent           string `mapstructure:"userAgent"`
 	ContextLines        int    `mapstructure:"contextLines"`
-	Lookback            int    `mapstructure:"lookback"`
 	UpdateSequenceId    int    `mapstructure:"updateSequenceId"`
 	AllowTags           bool   `mapstructure:"allowTags"`
 	Debug               bool   `mapstructure:"debug"`
@@ -192,6 +190,9 @@ func (o Options) ValidateRequired() error {
 	}
 	if o.EnvironmentID == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "environmentId")
+	}
+	if o.RepoOwner == "" {
+		missingRequiredOptions = append(missingRequiredOptions, "repoOwner")
 	}
 	if o.RepoName == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "repoName")

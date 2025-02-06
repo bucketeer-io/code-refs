@@ -83,26 +83,11 @@ Bucketeer. Combine with the outDir option to output code references to a CSV.`,
 		usage:        `Bucketeer environment ID. The API key must have access to this environment.`,
 	},
 	{
-		name:         "hunkUrlTemplate",
-		defaultValue: "",
-		usage: `If provided, Bucketeer will attempt to generate links to 
-your VCS service provider per code reference. 
-Example: https://github.com/bucketeer/bucketeer-find-code-refs/blob/${sha}/${filePath}#L${lineNumber}.
-Allowed template variables: 'sha', 'filePath', 'lineNumber'. If "hunkUrlTemplate" is not provided, but "repoUrl" is provided and "repoType" is not custom, Bucketeer will attempt to automatically generate source code links for the given "repoType".`,
-	},
-	{
 		name:         "ignoreServiceErrors",
 		short:        "i",
 		defaultValue: false,
 		usage: `If enabled, the scanner will terminate with exit code 0 when the
 Bucketeer API is unreachable or returns an unexpected response.`,
-	},
-	{
-		name:         "lookback",
-		short:        "l",
-		defaultValue: 10,
-		usage: `Sets the number of git commits to search in history for
-whether a feature flag was removed from code. May be set to 0 to disabled this feature. Setting this option to a high value will increase search time.`,
 	},
 	{
 		name:         "outDir",
