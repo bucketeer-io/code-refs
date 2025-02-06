@@ -40,6 +40,7 @@ func Run(opts options.Options, output bool) {
 	}
 }
 
+//nolint:ireturn // This function returns an interface for testing/mocking purposes
 func initializeAPI(opts options.Options) bucketeer.ApiClient {
 	return bucketeer.InitApiClient(bucketeer.ApiOptions{
 		ApiKey:    opts.ApiKey,
