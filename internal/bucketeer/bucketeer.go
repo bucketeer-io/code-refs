@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,8 +155,8 @@ func (c *apiClient) do(req *http.Request) (*http.Response, error) {
 }
 
 func (c *apiClient) GetFlagKeyList(ctx context.Context, opts options.Options) ([]string, error) {
-	url := c.baseUri + "/v1/features?pageSize=" + fmt.Sprint(DefaultPageSize)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	url := c.baseUri + "/v1/features?pageSize=" + strconv.Itoa(DefaultPageSize)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +199,7 @@ func (c *apiClient) CreateCodeReference(ctx context.Context, opts options.Option
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -226,7 +227,7 @@ func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Option
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "PATCH", url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -249,7 +250,7 @@ func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Option
 
 func (c *apiClient) DeleteCodeReference(ctx context.Context, opts options.Options, id string) error {
 	url := c.baseUri + "/v1/code_references/" + id
-	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
 	}
@@ -278,10 +279,10 @@ type ListCodeReferencesResponse struct {
 func (c *apiClient) ListCodeReferences(ctx context.Context, opts options.Options, featureId string, pageSize int64) (codeRefs []CodeReference, cursor string, totalCount string, err error) {
 	url := c.baseUri + "/v1/code_references?featureId=" + featureId
 	if pageSize > 0 {
-		url += "&pageSize=" + fmt.Sprint(pageSize)
+		url += "&pageSize=" + strconv.FormatInt(pageSize, 10)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, "", "", err
 	}

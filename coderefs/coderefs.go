@@ -26,101 +26,150 @@ func Run(opts options.Options, output bool) {
 	}
 
 	log.Info.Printf("absolute directory path: %s", absPath)
-	bucketeerApi := bucketeer.InitApiClient(bucketeer.ApiOptions{
+	bucketeerApi := initializeAPI(opts)
+	branchName, revision := setupGitInfo(opts, absPath)
+	repoType := determineRepoType(opts.RepoType)
+
+	matcher, refs := search.Scan(opts, absPath)
+	if output {
+		generateOutput(opts, matcher, refs)
+	}
+
+	if !opts.DryRun {
+		processCodeReferences(opts, bucketeerApi, refs, branchName, revision, repoType)
+	}
+}
+
+func initializeAPI(opts options.Options) bucketeer.ApiClient {
+	return bucketeer.InitApiClient(bucketeer.ApiOptions{
 		ApiKey:    opts.ApiKey,
 		BaseUri:   opts.BaseUri,
 		UserAgent: helpers.GetUserAgent(opts.UserAgent),
 	})
+}
 
-	branchName := opts.Branch
-	revision := opts.Revision
-	var gitClient *git.Client
+func setupGitInfo(opts options.Options, absPath string) (branchName, revision string) {
+	branchName = opts.Branch
+	revision = opts.Revision
 	if revision == "" {
-		gitClient, err = git.NewClient(absPath, branchName, opts.AllowTags)
+		gitClient, err := git.NewClient(absPath, branchName, opts.AllowTags)
 		if err != nil {
 			log.Error.Fatalf("%s", err)
 		}
 		branchName = gitClient.GitBranch
 		revision = gitClient.GitSha
 	}
+	return branchName, revision
+}
 
-	repoType := strings.ToUpper(opts.RepoType)
+func determineRepoType(repoType string) string {
+	repoType = strings.ToUpper(repoType)
 	if repoType != "GITHUB" && repoType != "GITLAB" && repoType != "BITBUCKET" {
 		repoType = "CUSTOM"
 	}
+	return repoType
+}
 
-	matcher, refs := search.Scan(opts, absPath)
+func processCodeReferences(
+	opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	refs []bucketeer.ReferenceHunksRep,
+	branchName, revision, repoType string,
+) {
+	existingRefs := fetchExistingReferences(opts, bucketeerApi, refs)
+	processNewReferences(opts, bucketeerApi, refs, existingRefs, branchName, revision, repoType)
+	deleteStaleReferences(opts, bucketeerApi, existingRefs)
+}
 
-	if output {
-		generateOutput(opts, matcher, refs)
+func fetchExistingReferences(
+	opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	refs []bucketeer.ReferenceHunksRep,
+) map[string]bucketeer.CodeReference {
+	existingRefs := make(map[string]bucketeer.CodeReference)
+	flagCounts := aggregateFeatureFlags(refs)
+
+	for flag := range flagCounts {
+		codeRefs, _, _, err := bucketeerApi.ListCodeReferences(context.Background(), opts, flag, bucketeer.DefaultPageSize)
+		if err != nil {
+			helpers.FatalServiceError(
+				fmt.Errorf("error getting existing code references from Bucketeer for flag %s: %w", flag, err),
+				opts.IgnoreServiceErrors,
+			)
+		}
+
+		for _, ref := range codeRefs {
+			existingRefs[ref.ContentHash] = ref
+		}
 	}
+	return existingRefs
+}
 
-	if !opts.DryRun {
-		// First, list all existing code references for each feature flag
-		existingRefs := make(map[string]bucketeer.CodeReference)
+func processNewReferences(
+	opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	refs []bucketeer.ReferenceHunksRep,
+	existingRefs map[string]bucketeer.CodeReference,
+	branchName, revision, repoType string,
+) {
+	for _, ref := range refs {
+		for _, hunk := range ref.Hunks {
+			codeRef := createCodeReference(opts, hunk, ref, branchName, revision, repoType)
+			updateOrCreateReference(opts, bucketeerApi, codeRef, existingRefs)
+		}
+	}
+}
 
-		// Get unique feature flags from the references
-		flagCounts := aggregateFeatureFlags(refs)
+func createCodeReference(opts options.Options,
+	hunk bucketeer.HunkRep,
+	ref bucketeer.ReferenceHunksRep,
+	branchName, revision, repoType string,
+) bucketeer.CodeReference {
+	return bucketeer.CodeReference{
+		FeatureID:        hunk.FlagKey,
+		FilePath:         ref.Path,
+		FileExtension:    hunk.FileExt,
+		LineNumber:       hunk.StartingLineNumber,
+		CodeSnippet:      hunk.Lines,
+		ContentHash:      hunk.ContentHash,
+		Aliases:          hunk.Aliases,
+		RepositoryName:   opts.RepoName,
+		RepositoryOwner:  opts.RepoOwner,
+		RepositoryType:   repoType,
+		RepositoryBranch: strings.TrimPrefix(branchName, "refs/heads/"),
+		CommitHash:       revision,
+		EnvironmentID:    opts.EnvironmentID,
+	}
+}
 
-		// List code references for each feature flag
-		for flag := range flagCounts {
-			codeRefs, _, _, err := bucketeerApi.ListCodeReferences(context.Background(), opts, flag, bucketeer.DefaultPageSize)
+func updateOrCreateReference(opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	codeRef bucketeer.CodeReference,
+	existingRefs map[string]bucketeer.CodeReference,
+) {
+	if existing, exists := existingRefs[codeRef.ContentHash]; exists {
+		log.Info.Printf("updating code reference in Bucketeer: id: %s, content hash: %s", existing.ID, codeRef.ContentHash)
+		err := bucketeerApi.UpdateCodeReference(context.Background(), opts, existing.ID, codeRef)
+		if err != nil {
+			helpers.FatalServiceError(fmt.Errorf("error updating code reference in Bucketeer: %w", err), opts.IgnoreServiceErrors)
+		}
+		delete(existingRefs, codeRef.ContentHash)
+	} else {
+		err := bucketeerApi.CreateCodeReference(context.Background(), opts, codeRef)
+		if err != nil {
+			helpers.FatalServiceError(fmt.Errorf("error sending code reference to Bucketeer: %w", err), opts.IgnoreServiceErrors)
+		}
+	}
+}
+
+func deleteStaleReferences(opts options.Options, bucketeerApi bucketeer.ApiClient, existingRefs map[string]bucketeer.CodeReference) {
+	for _, ref := range existingRefs {
+		if ref.RepositoryOwner == opts.RepoOwner && ref.RepositoryName == opts.RepoName {
+			err := bucketeerApi.DeleteCodeReference(context.Background(), opts, ref.ID)
 			if err != nil {
-				helpers.FatalServiceError(fmt.Errorf("error getting existing code references from Bucketeer for flag %s: %w", flag, err), opts.IgnoreServiceErrors)
+				helpers.FatalServiceError(fmt.Errorf("error deleting code reference from Bucketeer: %w", err), opts.IgnoreServiceErrors)
 			}
-
-			for _, ref := range codeRefs {
-				existingRefs[ref.ContentHash] = ref
-			}
-		}
-
-		// Now process new references
-		for _, ref := range refs {
-			for _, hunk := range ref.Hunks {
-				codeRef := bucketeer.CodeReference{
-					FeatureID:        hunk.FlagKey,
-					FilePath:         ref.Path,
-					FileExtension:    hunk.FileExt,
-					LineNumber:       hunk.StartingLineNumber,
-					CodeSnippet:      hunk.Lines,
-					ContentHash:      hunk.ContentHash,
-					Aliases:          hunk.Aliases,
-					RepositoryName:   opts.RepoName,
-					RepositoryOwner:  opts.RepoOwner,
-					RepositoryType:   repoType,
-					RepositoryBranch: strings.TrimPrefix(branchName, "refs/heads/"),
-					CommitHash:       revision,
-					EnvironmentID:    opts.EnvironmentID,
-				}
-
-				if existing, exists := existingRefs[hunk.ContentHash]; exists {
-					// Update the reference to ensure metadata is current
-					log.Info.Printf("updating code reference in Bucketeer: id: %s, content hash: %s", existing.ID, codeRef.ContentHash)
-					err := bucketeerApi.UpdateCodeReference(context.Background(), opts, existing.ID, codeRef)
-					if err != nil {
-						helpers.FatalServiceError(fmt.Errorf("error updating code reference in Bucketeer: %w", err), opts.IgnoreServiceErrors)
-					}
-					delete(existingRefs, hunk.ContentHash)
-				} else {
-					// Create new reference if content hash doesn't exist
-					err := bucketeerApi.CreateCodeReference(context.Background(), opts, codeRef)
-					if err != nil {
-						helpers.FatalServiceError(fmt.Errorf("error sending code reference to Bucketeer: %w", err), opts.IgnoreServiceErrors)
-					}
-				}
-			}
-		}
-
-		// Delete references that no longer exist in the codebase
-		for _, ref := range existingRefs {
-			// Only delete references from the same repository
-			if ref.RepositoryOwner == opts.RepoOwner && ref.RepositoryName == opts.RepoName {
-				err := bucketeerApi.DeleteCodeReference(context.Background(), opts, ref.ID)
-				if err != nil {
-					helpers.FatalServiceError(fmt.Errorf("error deleting code reference from Bucketeer: %w", err), opts.IgnoreServiceErrors)
-				}
-				log.Info.Printf("deleted code reference from Bucketeer: %+v", ref)
-			}
+			log.Info.Printf("deleted code reference from Bucketeer: %+v", ref)
 		}
 	}
 }
