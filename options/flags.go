@@ -7,6 +7,10 @@ type flag struct {
 	usage        string
 }
 
+const (
+	defaultContextLines = 2 // Default number of context lines to include
+)
+
 // Options that are available as command line flags
 var flags = []flag{
 	{
@@ -45,7 +49,7 @@ Allowed template variables: 'branchName', 'sha'. If "commitUrlTemplate" is not p
 	{
 		name:         "contextLines",
 		short:        "C",
-		defaultValue: 2,
+		defaultValue: defaultContextLines,
 		usage: `The number of context lines to send to Bucketeer. If < 0, no
 source code will be sent to Bucketeer. If 0, only the lines containing
 flag references will be sent. If > 0, will send that number of context

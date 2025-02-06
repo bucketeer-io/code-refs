@@ -1,10 +1,12 @@
 package coderefs
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,7 +64,7 @@ func Run(opts options.Options, output bool) {
 
 		// List code references for each feature flag
 		for flag := range flagCounts {
-			codeRefs, _, _, err := bucketeerApi.ListCodeReferences(opts, flag, 1000)
+			codeRefs, _, _, err := bucketeerApi.ListCodeReferences(context.Background(), opts, flag, bucketeer.DefaultPageSize)
 			if err != nil {
 				helpers.FatalServiceError(fmt.Errorf("error getting existing code references from Bucketeer for flag %s: %w", flag, err), opts.IgnoreServiceErrors)
 			}
@@ -94,14 +96,14 @@ func Run(opts options.Options, output bool) {
 				if existing, exists := existingRefs[hunk.ContentHash]; exists {
 					// Update the reference to ensure metadata is current
 					log.Info.Printf("updating code reference in Bucketeer: id: %s, content hash: %s", existing.ID, codeRef.ContentHash)
-					err := bucketeerApi.UpdateCodeReference(opts, existing.ID, codeRef)
+					err := bucketeerApi.UpdateCodeReference(context.Background(), opts, existing.ID, codeRef)
 					if err != nil {
 						helpers.FatalServiceError(fmt.Errorf("error updating code reference in Bucketeer: %w", err), opts.IgnoreServiceErrors)
 					}
 					delete(existingRefs, hunk.ContentHash)
 				} else {
 					// Create new reference if content hash doesn't exist
-					err := bucketeerApi.CreateCodeReference(opts, codeRef)
+					err := bucketeerApi.CreateCodeReference(context.Background(), opts, codeRef)
 					if err != nil {
 						helpers.FatalServiceError(fmt.Errorf("error sending code reference to Bucketeer: %w", err), opts.IgnoreServiceErrors)
 					}
@@ -113,7 +115,7 @@ func Run(opts options.Options, output bool) {
 		for _, ref := range existingRefs {
 			// Only delete references from the same repository
 			if ref.RepositoryOwner == opts.RepoOwner && ref.RepositoryName == opts.RepoName {
-				err := bucketeerApi.DeleteCodeReference(opts, ref.ID)
+				err := bucketeerApi.DeleteCodeReference(context.Background(), opts, ref.ID)
 				if err != nil {
 					helpers.FatalServiceError(fmt.Errorf("error deleting code reference from Bucketeer: %w", err), opts.IgnoreServiceErrors)
 				}
@@ -203,7 +205,7 @@ func writeToCSV(outDir, environmentID, repoName, revision string, refs []buckete
 				hunk.FlagKey,
 				ref.Path,
 				hunk.FileExt,
-				fmt.Sprintf("%d", hunk.StartingLineNumber),
+				strconv.Itoa(hunk.StartingLineNumber),
 				hunk.Lines,
 				hunk.ContentHash,
 				strings.Join(hunk.Aliases, "|"),

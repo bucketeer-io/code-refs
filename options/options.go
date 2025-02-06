@@ -16,10 +16,6 @@ import (
 	"github.com/bucketeer-io/code-refs/internal/validation"
 )
 
-const (
-	maxProjKeyLength = 20 // Maximum project key length
-)
-
 type RepoType string
 
 func (repoType RepoType) isValid() error {
@@ -252,16 +248,6 @@ func (o Options) Validate() error {
 
 	if o.Revision != "" && o.Branch == "" {
 		return errors.New(`"branch" option is required when "revision" option is set`)
-	}
-
-	return nil
-}
-
-func projKeyValidation(projKey string) error {
-	if strings.HasPrefix(projKey, "sdk-") {
-		return fmt.Errorf("provided project key (%s) appears to be a Bucketeer SDK key", "sdk-xxxx")
-	} else if strings.HasPrefix(projKey, "api-") {
-		return fmt.Errorf("provided project key (%s) appears to be a Bucketeer API access token", "api-xxxx")
 	}
 
 	return nil

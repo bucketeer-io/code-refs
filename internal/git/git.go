@@ -9,14 +9,8 @@ import (
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	object "github.com/go-git/go-git/v5/plumbing/object"
 
 	"github.com/bucketeer-io/code-refs/internal/log"
-)
-
-const (
-	// ... other constants ...
-	millisecondsInSecond = 1000 // Descriptive constant for milliseconds conversion
 )
 
 type Client struct {
@@ -219,10 +213,10 @@ func (c *Client) RemoteBranches() (branches map[string]bool, err error) {
 	return branches, nil
 }
 
-type CommitData struct {
-	commit *object.Commit
-	tree   *object.Tree
-}
+// type CommitData struct {
+// 	commit *object.Commit
+// 	tree   *object.Tree
+// }
 
 // FindExtinctions searches commit history for flags that had references removed recently
 // func (c *Client) FindExtinctions(project options.Project, flags []string, matcher search.Matcher, lookback int) ([]ld.ExtinctionRep, error) {

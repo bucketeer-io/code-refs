@@ -1,6 +1,7 @@
 package flags
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bucketeer-io/code-refs/internal/bucketeer"
@@ -56,7 +57,7 @@ func filterShortFlagKeys(flags []string) (filtered []string, omitted []string) {
 }
 
 func getFlags(bucketeerApi bucketeer.ApiClient, opts options.Options) ([]string, error) {
-	flags, err := bucketeerApi.GetFlagKeyList(opts)
+	flags, err := bucketeerApi.GetFlagKeyList(context.Background(), opts)
 	if err != nil {
 		return nil, err
 	}

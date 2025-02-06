@@ -2,6 +2,7 @@ package bucketeer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,11 @@ import (
 	"github.com/bucketeer-io/code-refs/internal/log"
 	"github.com/bucketeer-io/code-refs/options"
 	"github.com/cenkalti/backoff/v4"
+)
+
+const (
+	DefaultPageSize    = 1000 // Maximum number of items to return per page
+	serverErrorMinCode = 500  // HTTP 5xx status codes indicate server errors
 )
 
 type ReferenceHunksRep struct {
@@ -55,11 +61,11 @@ func (h HunkRep) Overlap(hr HunkRep) int {
 }
 
 type ApiClient interface {
-	GetFlagKeyList(opts options.Options) ([]string, error)
-	CreateCodeReference(opts options.Options, ref CodeReference) error
-	UpdateCodeReference(opts options.Options, id string, ref CodeReference) error
-	DeleteCodeReference(opts options.Options, id string) error
-	ListCodeReferences(opts options.Options, featureId string, pageSize int64) (codeRefs []CodeReference, cursor string, totalCount string, err error)
+	GetFlagKeyList(ctx context.Context, opts options.Options) ([]string, error)
+	CreateCodeReference(ctx context.Context, opts options.Options, ref CodeReference) error
+	UpdateCodeReference(ctx context.Context, opts options.Options, id string, ref CodeReference) error
+	DeleteCodeReference(ctx context.Context, opts options.Options, id string) error
+	ListCodeReferences(ctx context.Context, opts options.Options, featureId string, pageSize int64) (codeRefs []CodeReference, cursor string, totalCount string, err error)
 }
 
 type ApiOptions struct {
@@ -102,6 +108,7 @@ type apiClient struct {
 	client    *http.Client
 }
 
+//nolint:ireturn // This function returns an interface for testing/mocking purposes
 func InitApiClient(opts ApiOptions) ApiClient {
 	retryMax := 3
 	if opts.RetryMax != nil {
@@ -124,7 +131,7 @@ func (c *apiClient) do(req *http.Request) (*http.Response, error) {
 		if err != nil {
 			return err
 		}
-		if resp.StatusCode >= 500 {
+		if resp.StatusCode >= serverErrorMinCode {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			return fmt.Errorf("server error: %s", body)
@@ -137,15 +144,18 @@ func (c *apiClient) do(req *http.Request) (*http.Response, error) {
 
 	err := backoff.Retry(op, b)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
 
 	return resp, nil
 }
 
-func (c *apiClient) GetFlagKeyList(opts options.Options) ([]string, error) {
-	url := fmt.Sprintf("%s/v1/features?pageSize=1000", c.baseUri)
-	req, err := http.NewRequest("GET", url, nil)
+func (c *apiClient) GetFlagKeyList(ctx context.Context, opts options.Options) ([]string, error) {
+	url := c.baseUri + "/v1/features?pageSize=" + fmt.Sprint(DefaultPageSize)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -174,21 +184,21 @@ func (c *apiClient) GetFlagKeyList(opts options.Options) ([]string, error) {
 		return nil, err
 	}
 
-	var flags []string
+	flags := make([]string, 0, len(response.Features))
 	for _, feature := range response.Features {
 		flags = append(flags, feature.ID)
 	}
 	return flags, nil
 }
 
-func (c *apiClient) CreateCodeReference(opts options.Options, ref CodeReference) error {
-	url := fmt.Sprintf("%s/v1/code_references", c.baseUri)
+func (c *apiClient) CreateCodeReference(ctx context.Context, opts options.Options, ref CodeReference) error {
+	url := c.baseUri + "/v1/code_references"
 	body, err := json.Marshal(ref)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -209,14 +219,14 @@ func (c *apiClient) CreateCodeReference(opts options.Options, ref CodeReference)
 	return nil
 }
 
-func (c *apiClient) UpdateCodeReference(opts options.Options, id string, ref CodeReference) error {
-	url := fmt.Sprintf("%s/v1/code_references/%s", c.baseUri, id)
+func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Options, id string, ref CodeReference) error {
+	url := c.baseUri + "/v1/code_references/" + id
 	body, err := json.Marshal(ref)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, "PATCH", url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -237,9 +247,9 @@ func (c *apiClient) UpdateCodeReference(opts options.Options, id string, ref Cod
 	return nil
 }
 
-func (c *apiClient) DeleteCodeReference(opts options.Options, id string) error {
-	url := fmt.Sprintf("%s/v1/code_references/%s", c.baseUri, id)
-	req, err := http.NewRequest("DELETE", url, nil)
+func (c *apiClient) DeleteCodeReference(ctx context.Context, opts options.Options, id string) error {
+	url := c.baseUri + "/v1/code_references/" + id
+	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
 		return err
 	}
@@ -265,14 +275,13 @@ type ListCodeReferencesResponse struct {
 	TotalCount     string          `json:"totalCount"`
 }
 
-func (c *apiClient) ListCodeReferences(opts options.Options, featureId string, pageSize int64) (codeRefs []CodeReference, cursor string, totalCount string, err error) {
-	url := fmt.Sprintf("%s/v1/code_references?featureId=%s", c.baseUri, featureId)
-
+func (c *apiClient) ListCodeReferences(ctx context.Context, opts options.Options, featureId string, pageSize int64) (codeRefs []CodeReference, cursor string, totalCount string, err error) {
+	url := c.baseUri + "/v1/code_references?featureId=" + featureId
 	if pageSize > 0 {
-		url += fmt.Sprintf("&pageSize=%d", pageSize)
+		url += "&pageSize=" + fmt.Sprint(pageSize)
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, "", "", err
 	}
