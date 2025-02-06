@@ -128,19 +128,15 @@ func (c *apiClient) do(req *http.Request) (*http.Response, error) {
 	var resp *http.Response
 	op := func() error {
 		var err error
+		//nolint:bodyclose
 		resp, err = c.client.Do(req)
 		if err != nil {
 			return err
 		}
-		defer func() {
-			if resp != nil && resp.Body != nil {
-				_, _ = io.Copy(io.Discard, resp.Body)
-				resp.Body.Close()
-			}
-		}()
 
 		if resp.StatusCode >= serverErrorMinCode {
 			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
 			return fmt.Errorf("server error: %s", body)
 		}
 		return nil
@@ -151,6 +147,9 @@ func (c *apiClient) do(req *http.Request) (*http.Response, error) {
 
 	err := backoff.Retry(op, b)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
 
@@ -175,7 +174,6 @@ func (c *apiClient) GetFlagKeyList(ctx context.Context, opts options.Options) ([
 	if opts.Debug {
 		body, _ := io.ReadAll(resp.Body)
 		log.Debug.Printf("[GetFlagKeyList] Response Status: %d, Body: %s", resp.StatusCode, string(body))
-		// Create a new reader with the body content for the subsequent json.Decode
 		resp.Body = io.NopCloser(bytes.NewBuffer(body))
 	}
 
@@ -301,7 +299,6 @@ func (c *apiClient) ListCodeReferences(ctx context.Context, opts options.Options
 	if opts.Debug {
 		body, _ := io.ReadAll(resp.Body)
 		log.Debug.Printf("[ListCodeReferences] Response Status: %d, Body: %s", resp.StatusCode, string(body))
-		// Create a new reader with the body content for the subsequent json.Decode
 		resp.Body = io.NopCloser(bytes.NewBuffer(body))
 	}
 
