@@ -81,12 +81,6 @@ If not provided, will fallback to 'main'.`,
 Bucketeer. Combine with the outDir option to output code references to a CSV.`,
 	},
 	{
-		name:         "environmentId",
-		short:        "e",
-		defaultValue: "",
-		usage:        `Bucketeer environment ID. The API key must have access to this environment.`,
-	},
-	{
 		name:         "ignoreServiceErrors",
 		short:        "i",
 		defaultValue: false,

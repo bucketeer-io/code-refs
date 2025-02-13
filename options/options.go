@@ -47,7 +47,6 @@ type Options struct {
 	DefaultBranch       string `mapstructure:"defaultBranch"`
 	Dir                 string `mapstructure:"dir" yaml:"-"`
 	OutDir              string `mapstructure:"outDir"`
-	EnvironmentID       string `mapstructure:"environmentId"`
 	RepoOwner           string `mapstructure:"repoOwner"`
 	RepoName            string `mapstructure:"repoName"`
 	RepoType            string `mapstructure:"repoType"`
@@ -183,9 +182,6 @@ func (o Options) ValidateRequired() error {
 	}
 	if o.Dir == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "dir")
-	}
-	if o.EnvironmentID == "" {
-		missingRequiredOptions = append(missingRequiredOptions, "environmentId")
 	}
 	if o.RepoOwner == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "repoOwner")

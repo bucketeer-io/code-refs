@@ -139,7 +139,6 @@ func createCodeReference(opts options.Options,
 		RepositoryType:   repoType,
 		RepositoryBranch: strings.TrimPrefix(branchName, "refs/heads/"),
 		CommitHash:       revision,
-		EnvironmentID:    opts.EnvironmentID,
 	}
 }
 
@@ -178,7 +177,7 @@ func deleteStaleReferences(opts options.Options, bucketeerApi bucketeer.ApiClien
 func generateOutput(opts options.Options, matcher search.Matcher, refs []bucketeer.ReferenceHunksRep) {
 	outDir := opts.OutDir
 	if outDir != "" {
-		outPath, err := writeToCSV(outDir, opts.EnvironmentID, opts.RepoName, opts.Revision, refs)
+		outPath, err := writeToCSV(outDir, opts.RepoName, opts.Revision, refs)
 		if err != nil {
 			log.Error.Fatalf("error writing code references to csv: %s", err)
 		}
@@ -204,11 +203,10 @@ func generateOutput(opts options.Options, matcher search.Matcher, refs []buckete
 	}
 
 	log.Info.Printf(
-		"sending %d code references across %d flags and %d files to Bucketeer for environment: %s",
+		"sending %d code references across %d flags and %d files to Bucketeer",
 		getTotalHunkCount(refs),
 		len(matcher.Element.Elements),
 		len(refs),
-		opts.EnvironmentID,
 	)
 }
 
@@ -220,9 +218,9 @@ func getTotalHunkCount(refs []bucketeer.ReferenceHunksRep) int {
 	return total
 }
 
-func writeToCSV(outDir, environmentID, repoName, revision string, refs []bucketeer.ReferenceHunksRep) (string, error) {
+func writeToCSV(outDir, repoName, revision string, refs []bucketeer.ReferenceHunksRep) (string, error) {
 	timestamp := time.Now().Unix()
-	filename := fmt.Sprintf("code-references-%s-%s-%s-%d.csv", environmentID, repoName, revision, timestamp)
+	filename := fmt.Sprintf("code-references-%s-%s-%d.csv", repoName, revision, timestamp)
 	outPath := filepath.Join(outDir, filename)
 
 	file, err := os.Create(outPath)
