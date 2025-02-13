@@ -26,18 +26,50 @@ func Run(opts options.Options, output bool) {
 	}
 
 	log.Info.Printf("absolute directory path: %s", absPath)
-	bucketeerApi := initializeAPI(opts)
-	branchName, revision := setupGitInfo(opts, absPath)
-	repoType := determineRepoType(opts.RepoType)
 
-	matcher, refs := search.Scan(opts, absPath)
-	if output {
-		generateOutput(opts, matcher, refs)
+	// Get all API keys to process
+	apiKeys := getAllApiKeys(opts)
+	totalEnvs := len(apiKeys)
+	log.Info.Printf("Processing %d api key(s)", totalEnvs)
+
+	// Process each API key
+	for i, apiKey := range apiKeys {
+		log.Info.Printf("Processing api key %d/%d", i+1, totalEnvs)
+
+		// Create a copy of options with current API key
+		currentOpts := opts
+		currentOpts.ApiKey = apiKey
+
+		bucketeerApi := initializeAPI(currentOpts)
+		branchName, revision := setupGitInfo(currentOpts, absPath)
+		repoType := determineRepoType(currentOpts.RepoType)
+
+		matcher, refs := search.Scan(currentOpts, absPath)
+		if output {
+			generateOutput(currentOpts, matcher, refs)
+		}
+
+		if !currentOpts.DryRun {
+			processCodeReferences(currentOpts, bucketeerApi, refs, branchName, revision, repoType)
+		}
+	}
+}
+
+// getAllApiKeys returns all API keys to process, combining single ApiKey and ApiKeys slice
+func getAllApiKeys(opts options.Options) []string {
+	var apiKeys []string
+
+	// Add single API key if present
+	if opts.ApiKey != "" {
+		apiKeys = append(apiKeys, opts.ApiKey)
 	}
 
-	if !opts.DryRun {
-		processCodeReferences(opts, bucketeerApi, refs, branchName, revision, repoType)
+	// Add multiple API keys if present
+	if len(opts.ApiKeys) > 0 {
+		apiKeys = append(apiKeys, opts.ApiKeys...)
 	}
+
+	return apiKeys
 }
 
 //nolint:ireturn // This function returns an interface for testing/mocking purposes

@@ -8,8 +8,18 @@ The section provides examples of various `bash` commands to execute `bucketeer-f
 bucketeer-find-code-refs \
   --apiKey=$YOUR_BUCKETEER_API_KEY \ # example: api-xxxx
   --baseUri=$YOUR_BUCKETEER_BASE_URI \ # example: https://api.bucketeer.io
-  --environmentId=$YOUR_BUCKETEER_ENVIRONMENT_ID \ # example: development
   --repoName=$YOUR_REPOSITORY_NAME \ # example: my-repo
+  --dir="/path/to/git/repo"
+```
+
+## Configuration with multiple API keys
+
+```bash
+bucketeer-find-code-refs \
+  --apiKeys="$YOUR_BUCKETEER_API_KEY1" \
+  --apiKeys="$YOUR_BUCKETEER_API_KEY2" \
+  --baseUri=$YOUR_BUCKETEER_BASE_URI \
+  --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo"
 ```
 
@@ -19,7 +29,6 @@ bucketeer-find-code-refs \
 bucketeer-find-code-refs \
   --apiKey="$YOUR_BUCKETEER_API_KEY" \
   --baseUri="$YOUR_BUCKETEER_BASE_URI" \
-  --environmentId="$YOUR_BUCKETEER_ENVIRONMENT_ID" \
   --repoName="$YOUR_REPOSITORY_NAME" \
   --dir="/path/to/git/repo" \
   --contextLines=3 # can be up to 5. If < 0, no source code will be sent to Bucketeer
@@ -33,7 +42,6 @@ A configuration with the the `repoType` set to GitHub, and the `repoUrl` set to 
 bucketeer-find-code-refs \
   --apiKey="$YOUR_BUCKETEER_API_KEY" \
   --baseUri="$YOUR_BUCKETEER_BASE_URI" \
-  --environmentId="$YOUR_BUCKETEER_ENVIRONMENT_ID" \
   --repoName="$YOUR_REPOSITORY_NAME" \
   --dir="/path/to/git/repo" \
   --contextLines=3 \
@@ -49,7 +57,6 @@ By default, `bucketeer-find-code-refs` will attempt to infer repository metadata
 bucketeer-find-code-refs \
   --apiKey=$YOUR_BUCKETEER_API_KEY \
   --baseUri=$YOUR_BUCKETEER_BASE_URI \
-  --environmentId=$YOUR_BUCKETEER_ENVIRONMENT_ID \
   --repoName=$YOUR_REPOSITORY_NAME \ # example: my-repo
   --dir="/path/to/git/repo" \
   --revision="REPO_REVISION_STRING" \ # e.g. a version hash
@@ -66,7 +73,6 @@ The following example instructs the `prune` command to delete code references fo
 bucketeer-find-code-refs prune \
   --apiKey=$YOUR_BUCKETEER_API_KEY \
   --baseUri=$YOUR_BUCKETEER_BASE_URI \
-  --environmentId=$YOUR_BUCKETEER_ENVIRONMENT_ID \
   --repoName=$YOUR_REPOSITORY_NAME \ # example: my-repo
   --dir="/path/to/git/repo" \
   "branch1" "branch2"

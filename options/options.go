@@ -40,27 +40,28 @@ type Project struct {
 	Aliases []Alias `mapstructure:"aliases"`
 }
 type Options struct {
-	ApiKey              string `mapstructure:"apiKey"`
-	BaseUri             string `mapstructure:"baseUri"`
-	Branch              string `mapstructure:"branch"`
-	CommitUrlTemplate   string `mapstructure:"commitUrlTemplate"`
-	DefaultBranch       string `mapstructure:"defaultBranch"`
-	Dir                 string `mapstructure:"dir" yaml:"-"`
-	OutDir              string `mapstructure:"outDir"`
-	RepoOwner           string `mapstructure:"repoOwner"`
-	RepoName            string `mapstructure:"repoName"`
-	RepoType            string `mapstructure:"repoType"`
-	RepoUrl             string `mapstructure:"repoUrl"`
-	Revision            string `mapstructure:"revision"`
-	Subdirectory        string `mapstructure:"subdirectory"`
-	UserAgent           string `mapstructure:"userAgent"`
-	ContextLines        int    `mapstructure:"contextLines"`
-	UpdateSequenceId    int    `mapstructure:"updateSequenceId"`
-	AllowTags           bool   `mapstructure:"allowTags"`
-	Debug               bool   `mapstructure:"debug"`
-	DryRun              bool   `mapstructure:"dryRun"`
-	IgnoreServiceErrors bool   `mapstructure:"ignoreServiceErrors"`
-	Prune               bool   `mapstructure:"prune"`
+	ApiKey              string   `mapstructure:"apiKey"`
+	ApiKeys             []string `mapstructure:"apiKeys"`
+	BaseUri             string   `mapstructure:"baseUri"`
+	Branch              string   `mapstructure:"branch"`
+	CommitUrlTemplate   string   `mapstructure:"commitUrlTemplate"`
+	DefaultBranch       string   `mapstructure:"defaultBranch"`
+	Dir                 string   `mapstructure:"dir" yaml:"-"`
+	OutDir              string   `mapstructure:"outDir"`
+	RepoOwner           string   `mapstructure:"repoOwner"`
+	RepoName            string   `mapstructure:"repoName"`
+	RepoType            string   `mapstructure:"repoType"`
+	RepoUrl             string   `mapstructure:"repoUrl"`
+	Revision            string   `mapstructure:"revision"`
+	Subdirectory        string   `mapstructure:"subdirectory"`
+	UserAgent           string   `mapstructure:"userAgent"`
+	ContextLines        int      `mapstructure:"contextLines"`
+	UpdateSequenceId    int      `mapstructure:"updateSequenceId"`
+	AllowTags           bool     `mapstructure:"allowTags"`
+	Debug               bool     `mapstructure:"debug"`
+	DryRun              bool     `mapstructure:"dryRun"`
+	IgnoreServiceErrors bool     `mapstructure:"ignoreServiceErrors"`
+	Prune               bool     `mapstructure:"prune"`
 
 	// The following options can only be configured via YAML configuration
 	Aliases    []Alias    `mapstructure:"aliases"`
@@ -83,6 +84,8 @@ func Init(flagSet *pflag.FlagSet) error {
 			flagSet.IntP(f.name, f.short, value, usage)
 		case bool:
 			flagSet.BoolP(f.name, f.short, value, usage)
+		case []string:
+			flagSet.StringSlice(f.name, value, usage)
 		}
 	}
 
@@ -118,13 +121,14 @@ func InitYAML() error {
 func validateYAMLPreconditions() error {
 	baseUri := viper.GetString("baseUri")
 	apiKey := viper.GetString("apiKey")
+	apiKeys := viper.GetStringSlice("apiKeys")
 	dir := viper.GetString("dir")
 	missingRequiredOptions := []string{}
 	if baseUri == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "baseUri")
 	}
-	if apiKey == "" {
-		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
+	if apiKey == "" && len(apiKeys) == 0 {
+		missingRequiredOptions = append(missingRequiredOptions, "apiKey or apiKeys")
 	}
 	if dir == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "dir")
@@ -150,10 +154,25 @@ func GetWrapperOptions(dir string, merge func(Options) (Options, error)) (Option
 	}
 
 	// Set precondition flags
-	err = flags.Set("apiKey", os.Getenv("BUCKETEER_API_KEY"))
-	if err != nil {
-		return Options{}, err
+	apiKey := os.Getenv("BUCKETEER_API_KEY")
+	if apiKey != "" {
+		err = flags.Set("apiKey", apiKey)
+		if err != nil {
+			return Options{}, err
+		}
 	}
+
+	// Handle multiple API keys from environment
+	apiKeys := os.Getenv("BUCKETEER_API_KEYS")
+	if apiKeys != "" {
+		for _, key := range strings.Split(apiKeys, ",") {
+			err = flags.Set("apiKeys", strings.TrimSpace(key))
+			if err != nil {
+				return Options{}, err
+			}
+		}
+	}
+
 	err = flags.Set("dir", dir)
 	if err != nil {
 		return Options{}, err
@@ -174,8 +193,8 @@ func GetWrapperOptions(dir string, merge func(Options) (Options, error)) (Option
 
 func (o Options) ValidateRequired() error {
 	missingRequiredOptions := []string{}
-	if o.ApiKey == "" {
-		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
+	if o.ApiKey == "" && len(o.ApiKeys) == 0 {
+		missingRequiredOptions = append(missingRequiredOptions, "apiKey or apiKeys")
 	}
 	if o.BaseUri == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "baseUri")

@@ -20,6 +20,11 @@ var flags = []flag{
 		usage:        "Bucketeer API key with write-level access.",
 	},
 	{
+		name:         "apiKeys",
+		defaultValue: []string{},
+		usage:        "Multiple Bucketeer API keys with write-level access. Can be specified multiple times for different environments.",
+	},
+	{
 		name:         "allowTags",
 		defaultValue: false,
 		usage:        "Enables storing references for tags. The tag will be listed as a branch.",
