@@ -121,7 +121,7 @@ func TestParseBranch(t *testing.T) {
 func TestMergeGithubOptions_withCliRepoName(t *testing.T) {
 	os.Setenv("GITHUB_REF", "refs/heads/test")
 	var options o.Options = o.Options{
-		ApiKey:   "deaf-beef",
+		ApiKey:   []string{"deaf-beef"},
 		RepoName: "myapp-react",
 	}
 	result, _ := mergeGithubOptions(options)
@@ -132,7 +132,7 @@ func TestMergeGithubOptions_withGithubRepoName(t *testing.T) {
 	os.Setenv("GITHUB_REPOSITORY", "yusinto/myapp-golang")
 	os.Setenv("GITHUB_REF", "refs/heads/test")
 	var options o.Options = o.Options{
-		ApiKey: "deaf-beef",
+		ApiKey: []string{"deaf-beef"},
 	}
 	result, _ := mergeGithubOptions(options)
 	assert.Equal(t, "myapp-golang", result.RepoName)

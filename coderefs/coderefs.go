@@ -27,18 +27,16 @@ func Run(opts options.Options, output bool) {
 
 	log.Info.Printf("absolute directory path: %s", absPath)
 
-	// Get all API keys to process
-	apiKeys := getAllApiKeys(opts)
-	totalEnvs := len(apiKeys)
+	totalEnvs := len(opts.ApiKey)
 	log.Info.Printf("Processing %d api key(s)", totalEnvs)
 
 	// Process each API key
-	for i, apiKey := range apiKeys {
+	for i, apiKey := range opts.ApiKey {
 		log.Info.Printf("Processing api key %d/%d", i+1, totalEnvs)
 
 		// Create a copy of options with current API key
 		currentOpts := opts
-		currentOpts.ApiKey = apiKey
+		currentOpts.ApiKey = []string{apiKey}
 
 		bucketeerApi := initializeAPI(currentOpts)
 		branchName, revision := setupGitInfo(currentOpts, absPath)
@@ -55,27 +53,10 @@ func Run(opts options.Options, output bool) {
 	}
 }
 
-// getAllApiKeys returns all API keys to process, combining single ApiKey and ApiKeys slice
-func getAllApiKeys(opts options.Options) []string {
-	var apiKeys []string
-
-	// Add single API key if present
-	if opts.ApiKey != "" {
-		apiKeys = append(apiKeys, opts.ApiKey)
-	}
-
-	// Add multiple API keys if present
-	if len(opts.ApiKeys) > 0 {
-		apiKeys = append(apiKeys, opts.ApiKeys...)
-	}
-
-	return apiKeys
-}
-
 //nolint:ireturn // This function returns an interface for testing/mocking purposes
 func initializeAPI(opts options.Options) bucketeer.ApiClient {
 	return bucketeer.InitApiClient(bucketeer.ApiOptions{
-		ApiKey:    opts.ApiKey,
+		ApiKey:    opts.ApiKey[0],
 		BaseUri:   opts.BaseUri,
 		UserAgent: helpers.GetUserAgent(opts.UserAgent),
 	})

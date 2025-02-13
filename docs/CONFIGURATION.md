@@ -14,8 +14,7 @@ The following arguments are required to run `bucketeer-find-code-refs`. For a de
 
 | Option        | Description                                                                                                                                                                                                                                    |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apiKey`      | Bucketeer API key with write-level access. |
-| `apiKeys`     | Multiple Bucketeer API keys with write-level access. Can be specified multiple times for different environments. |
+| `apiKey`      | Bucketeer API key with write-level access. Can be specified multiple times for different environments. |
 | `dir`         | Path to existing checkout of the git repo. The currently checked out branch will be scanned for code references.                                                                                                                               |
 | `baseUri`    | Bucketeer api service URI. |
 
@@ -30,8 +29,7 @@ bucketeer-find-code-refs [flags]
 Flags:
 ```
       --allowTags                  Enables storing references for tags. The tag will be listed as a branch.
-  -k, --apiKey string              Bucketeer API key with write-level access.
-      --apiKeys strings            Multiple Bucketeer API keys with write-level access. Can be specified multiple times for different environments.
+      --apiKey strings            Bucketeer API key with write-level access. Can be specified multiple times for different environments.
   -U, --baseUri string             Bucketeer base URI.
   -b, --branch string              The currently checked out branch. If not provided, branch name will be auto-detected. Provide this option when using CI systems that leave the repository in a detached HEAD state.
       --commitUrlTemplate string   If provided, Bucketeer will attempt to generate links to your VCS service provider per commit. Example: https://github.com/bucketeer/bucketeer-find-code-refs/commit/${sha}. Allowed template variables: 'branchName', 'sha'. If "commitUrlTemplate" is not provided, but "repoUrl" is provided and "repoType" is not custom, Bucketeer will attempt to automatically generate source code links for the given "repoType".
@@ -56,7 +54,7 @@ Flags:
 
 ## Environment variables
 
-All command line flags are available as environment variables following the "upper snake case" format, with a prefix of `BUCKETEER_`. For example, the command line option `apiKey` may be set as an environment variable e.g. `export BUCKETEER_API_KEY = 'myTestToken'`. 
+All command line flags are available as environment variables following the "upper snake case" format, with a prefix of `BUCKETEER_`. For example, the command line option `apiKey` may be set as an environment variable e.g. `export BUCKETEER_APIKEY = 'myTestToken'`. For multiple API keys, you can use comma-separated values: `export BUCKETEER_APIKEY = 'key1,key2,key3'`.
 
 ## YAML
 

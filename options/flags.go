@@ -15,14 +15,8 @@ const (
 var flags = []flag{
 	{
 		name:         "apiKey",
-		short:        "k",
-		defaultValue: "",
-		usage:        "Bucketeer API key with write-level access.",
-	},
-	{
-		name:         "apiKeys",
 		defaultValue: []string{},
-		usage:        "Multiple Bucketeer API keys with write-level access. Can be specified multiple times for different environments.",
+		usage:        "Bucketeer API key with write-level access. Can be specified multiple times for different environments.",
 	},
 	{
 		name:         "allowTags",

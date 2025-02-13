@@ -6,9 +6,9 @@ The section provides examples of various `bash` commands to execute `bucketeer-f
 
 ```bash
 bucketeer-find-code-refs \
-  --apiKey=$YOUR_BUCKETEER_API_KEY \ # example: api-xxxx
-  --baseUri=$YOUR_BUCKETEER_BASE_URI \ # example: https://api.bucketeer.io
-  --repoName=$YOUR_REPOSITORY_NAME \ # example: my-repo
+  --apiKey=$YOUR_BUCKETEER_API_KEY \
+  --baseUri=$YOUR_BUCKETEER_BASE_URI \
+  --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo"
 ```
 
@@ -16,8 +16,18 @@ bucketeer-find-code-refs \
 
 ```bash
 bucketeer-find-code-refs \
-  --apiKeys="$YOUR_BUCKETEER_API_KEY1" \
-  --apiKeys="$YOUR_BUCKETEER_API_KEY2" \
+  --apiKey="$YOUR_BUCKETEER_API_KEY1" \
+  --apiKey="$YOUR_BUCKETEER_API_KEY2" \
+  --baseUri=$YOUR_BUCKETEER_BASE_URI \
+  --repoName=$YOUR_REPOSITORY_NAME \
+  --dir="/path/to/git/repo"
+```
+
+## Using environment variables with multiple API keys
+
+```bash
+export BUCKETEER_APIKEY="key1,key2,key3"
+bucketeer-find-code-refs \
   --baseUri=$YOUR_BUCKETEER_BASE_URI \
   --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo"
@@ -57,23 +67,8 @@ By default, `bucketeer-find-code-refs` will attempt to infer repository metadata
 bucketeer-find-code-refs \
   --apiKey=$YOUR_BUCKETEER_API_KEY \
   --baseUri=$YOUR_BUCKETEER_BASE_URI \
-  --repoName=$YOUR_REPOSITORY_NAME \ # example: my-repo
+  --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo" \
-  --revision="REPO_REVISION_STRING" \ # e.g. a version hash
+  --revision="REPO_REVISION_STRING" \
   --branch="dev"
-```
-
-### Branch garbage collection for non-git repositories
-
-When scanning a non-git repository, automatic [branch garbage collection](../README.md#branch-garbage-collection) is disabled. The `prune` sub-command may be used to manually delete code references for stale branches.
-
-The following example instructs the `prune` command to delete code references for the branches named "branch1" and "branch2":
-
-```bash
-bucketeer-find-code-refs prune \
-  --apiKey=$YOUR_BUCKETEER_API_KEY \
-  --baseUri=$YOUR_BUCKETEER_BASE_URI \
-  --repoName=$YOUR_REPOSITORY_NAME \ # example: my-repo
-  --dir="/path/to/git/repo" \
-  "branch1" "branch2"
 ```

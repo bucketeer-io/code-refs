@@ -40,8 +40,7 @@ type Project struct {
 	Aliases []Alias `mapstructure:"aliases"`
 }
 type Options struct {
-	ApiKey              string   `mapstructure:"apiKey"`
-	ApiKeys             []string `mapstructure:"apiKeys"`
+	ApiKey              []string `mapstructure:"apiKey"`
 	BaseUri             string   `mapstructure:"baseUri"`
 	Branch              string   `mapstructure:"branch"`
 	CommitUrlTemplate   string   `mapstructure:"commitUrlTemplate"`
@@ -120,15 +119,14 @@ func InitYAML() error {
 // validatePreconditions ensures required flags have been set
 func validateYAMLPreconditions() error {
 	baseUri := viper.GetString("baseUri")
-	apiKey := viper.GetString("apiKey")
-	apiKeys := viper.GetStringSlice("apiKeys")
+	apiKeys := viper.GetStringSlice("apiKey")
 	dir := viper.GetString("dir")
 	missingRequiredOptions := []string{}
 	if baseUri == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "baseUri")
 	}
-	if apiKey == "" && len(apiKeys) == 0 {
-		missingRequiredOptions = append(missingRequiredOptions, "apiKey or apiKeys")
+	if len(apiKeys) == 0 {
+		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
 	}
 	if dir == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "dir")
@@ -154,7 +152,7 @@ func GetWrapperOptions(dir string, merge func(Options) (Options, error)) (Option
 	}
 
 	// Set precondition flags
-	apiKey := os.Getenv("BUCKETEER_API_KEY")
+	apiKey := os.Getenv("BUCKETEER_APIKEY")
 	if apiKey != "" {
 		err = flags.Set("apiKey", apiKey)
 		if err != nil {
@@ -163,10 +161,10 @@ func GetWrapperOptions(dir string, merge func(Options) (Options, error)) (Option
 	}
 
 	// Handle multiple API keys from environment
-	apiKeys := os.Getenv("BUCKETEER_API_KEYS")
+	apiKeys := os.Getenv("BUCKETEER_APIKEY")
 	if apiKeys != "" {
 		for _, key := range strings.Split(apiKeys, ",") {
-			err = flags.Set("apiKeys", strings.TrimSpace(key))
+			err = flags.Set("apiKey", strings.TrimSpace(key))
 			if err != nil {
 				return Options{}, err
 			}
@@ -193,8 +191,8 @@ func GetWrapperOptions(dir string, merge func(Options) (Options, error)) (Option
 
 func (o Options) ValidateRequired() error {
 	missingRequiredOptions := []string{}
-	if o.ApiKey == "" && len(o.ApiKeys) == 0 {
-		missingRequiredOptions = append(missingRequiredOptions, "apiKey or apiKeys")
+	if len(o.ApiKey) == 0 {
+		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
 	}
 	if o.BaseUri == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "baseUri")
