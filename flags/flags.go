@@ -16,9 +16,9 @@ const (
 
 func GetFlagKeys(opts options.Options) []string {
 	bucketeerApi := bucketeer.InitApiClient(bucketeer.ApiOptions{
-		ApiKey:    opts.ApiKey[0],
-		BaseUri:   opts.BaseUri,
-		UserAgent: helpers.GetUserAgent(opts.UserAgent),
+		ApiKey:      opts.ApiKey[0],
+		ApiEndpoint: opts.ApiEndpoint,
+		UserAgent:   helpers.GetUserAgent(opts.UserAgent),
 	})
 	ignoreServiceErrors := opts.IgnoreServiceErrors
 

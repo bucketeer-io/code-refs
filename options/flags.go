@@ -24,7 +24,7 @@ var flags = []flag{
 		usage:        "Enables storing references for tags. The tag will be listed as a branch.",
 	},
 	{
-		name:         "baseUri",
+		name:         "apiEndpoint",
 		short:        "U",
 		defaultValue: "",
 		usage:        "Bucketeer base URI.",

@@ -56,9 +56,9 @@ func Run(opts options.Options, output bool) {
 //nolint:ireturn // This function returns an interface for testing/mocking purposes
 func initializeAPI(opts options.Options) bucketeer.ApiClient {
 	return bucketeer.InitApiClient(bucketeer.ApiOptions{
-		ApiKey:    opts.ApiKey[0],
-		BaseUri:   opts.BaseUri,
-		UserAgent: helpers.GetUserAgent(opts.UserAgent),
+		ApiKey:      opts.ApiKey[0],
+		ApiEndpoint: opts.ApiEndpoint,
+		UserAgent:   helpers.GetUserAgent(opts.UserAgent),
 	})
 }
 

@@ -16,7 +16,7 @@ The following arguments are required to run `bucketeer-find-code-refs`. For a de
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apiKey`      | Bucketeer API key with write-level access. Can be specified multiple times for different environments. |
 | `dir`         | Path to existing checkout of the git repo. The currently checked out branch will be scanned for code references.                                                                                                                               |
-| `baseUri`    | Bucketeer api service URI. |
+| `apiEndpoint`    | Bucketeer api service URI. |
 
 ## Command line
 
@@ -29,8 +29,8 @@ bucketeer-find-code-refs [flags]
 Flags:
 ```
       --allowTags                  Enables storing references for tags. The tag will be listed as a branch.
-      --apiKey strings            Bucketeer API key with write-level access. Can be specified multiple times for different environments.
-  -U, --baseUri string             Bucketeer base URI.
+  -U, --apiEndpoint string         Bucketeer base URI.
+      --apiKey strings             Bucketeer API key with write-level access. Can be specified multiple times for different environments.
   -b, --branch string              The currently checked out branch. If not provided, branch name will be auto-detected. Provide this option when using CI systems that leave the repository in a detached HEAD state.
       --commitUrlTemplate string   If provided, Bucketeer will attempt to generate links to your VCS service provider per commit. Example: https://github.com/bucketeer/bucketeer-find-code-refs/commit/${sha}. Allowed template variables: 'branchName', 'sha'. If "commitUrlTemplate" is not provided, but "repoUrl" is provided and "repoType" is not custom, Bucketeer will attempt to automatically generate source code links for the given "repoType".
   -C, --contextLines int           The number of context lines to send to Bucketeer. If < 0, no source code will be sent to Bucketeer. If 0, only the lines containing flag references will be sent. If > 0, will send that number of context lines above and below the flag reference. A maximum of 5 context lines may be provided. (default 2)

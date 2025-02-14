@@ -70,10 +70,10 @@ type ApiClient interface {
 }
 
 type ApiOptions struct {
-	ApiKey    string
-	BaseUri   string
-	UserAgent string
-	RetryMax  *int
+	ApiKey      string
+	ApiEndpoint string
+	UserAgent   string
+	RetryMax    *int
 }
 
 type RepoParams struct {
@@ -102,11 +102,11 @@ type CodeReference struct {
 }
 
 type apiClient struct {
-	apiKey    string
-	baseUri   string
-	userAgent string
-	retryMax  int
-	client    *http.Client
+	apiKey      string
+	apiEndpoint string
+	userAgent   string
+	retryMax    int
+	client      *http.Client
 }
 
 //nolint:ireturn
@@ -116,11 +116,11 @@ func InitApiClient(opts ApiOptions) ApiClient {
 		retryMax = *opts.RetryMax
 	}
 	return &apiClient{
-		apiKey:    opts.ApiKey,
-		baseUri:   opts.BaseUri,
-		userAgent: opts.UserAgent,
-		retryMax:  retryMax,
-		client:    &http.Client{},
+		apiKey:      opts.ApiKey,
+		apiEndpoint: opts.ApiEndpoint,
+		userAgent:   opts.UserAgent,
+		retryMax:    retryMax,
+		client:      &http.Client{},
 	}
 }
 
@@ -157,7 +157,7 @@ func (c *apiClient) do(req *http.Request) (*http.Response, error) {
 }
 
 func (c *apiClient) GetFlagKeyList(ctx context.Context, opts options.Options) ([]string, error) {
-	url := c.baseUri + "/v1/features?pageSize=" + strconv.Itoa(DefaultPageSize)
+	url := c.apiEndpoint + "/v1/features?pageSize=" + strconv.Itoa(DefaultPageSize)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -194,7 +194,7 @@ func (c *apiClient) GetFlagKeyList(ctx context.Context, opts options.Options) ([
 }
 
 func (c *apiClient) CreateCodeReference(ctx context.Context, opts options.Options, ref CodeReference) error {
-	url := c.baseUri + "/v1/code_references"
+	url := c.apiEndpoint + "/v1/code_references"
 	body, err := json.Marshal(ref)
 	if err != nil {
 		return err
@@ -222,7 +222,7 @@ func (c *apiClient) CreateCodeReference(ctx context.Context, opts options.Option
 }
 
 func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Options, id string, ref CodeReference) error {
-	url := c.baseUri + "/v1/code_references/" + id
+	url := c.apiEndpoint + "/v1/code_references/" + id
 	body, err := json.Marshal(ref)
 	if err != nil {
 		return err
@@ -250,7 +250,7 @@ func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Option
 }
 
 func (c *apiClient) DeleteCodeReference(ctx context.Context, opts options.Options, id string) error {
-	url := c.baseUri + "/v1/code_references/" + id
+	url := c.apiEndpoint + "/v1/code_references/" + id
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
@@ -278,7 +278,7 @@ type ListCodeReferencesResponse struct {
 }
 
 func (c *apiClient) ListCodeReferences(ctx context.Context, opts options.Options, featureId string, pageSize int64) (codeRefs []CodeReference, cursor string, totalCount string, err error) {
-	url := c.baseUri + "/v1/code_references?featureId=" + featureId
+	url := c.apiEndpoint + "/v1/code_references?featureId=" + featureId
 	if pageSize > 0 {
 		url += "&pageSize=" + strconv.FormatInt(pageSize, 10)
 	}

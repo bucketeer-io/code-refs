@@ -41,7 +41,7 @@ type Project struct {
 }
 type Options struct {
 	ApiKey              []string `mapstructure:"apiKey"`
-	BaseUri             string   `mapstructure:"baseUri"`
+	ApiEndpoint         string   `mapstructure:"apiEndpoint"`
 	Branch              string   `mapstructure:"branch"`
 	CommitUrlTemplate   string   `mapstructure:"commitUrlTemplate"`
 	DefaultBranch       string   `mapstructure:"defaultBranch"`
@@ -118,12 +118,12 @@ func InitYAML() error {
 
 // validatePreconditions ensures required flags have been set
 func validateYAMLPreconditions() error {
-	baseUri := viper.GetString("baseUri")
+	apiEndpoint := viper.GetString("apiEndpoint")
 	apiKeys := viper.GetStringSlice("apiKey")
 	dir := viper.GetString("dir")
 	missingRequiredOptions := []string{}
-	if baseUri == "" {
-		missingRequiredOptions = append(missingRequiredOptions, "baseUri")
+	if apiEndpoint == "" {
+		missingRequiredOptions = append(missingRequiredOptions, "apiEndpoint")
 	}
 	if len(apiKeys) == 0 {
 		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
@@ -194,8 +194,8 @@ func (o Options) ValidateRequired() error {
 	if len(o.ApiKey) == 0 {
 		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
 	}
-	if o.BaseUri == "" {
-		missingRequiredOptions = append(missingRequiredOptions, "baseUri")
+	if o.ApiEndpoint == "" {
+		missingRequiredOptions = append(missingRequiredOptions, "apiEndpoint")
 	}
 	if o.Dir == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "dir")
