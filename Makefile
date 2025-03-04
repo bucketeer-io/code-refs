@@ -66,6 +66,14 @@ publish-release-circle-orb: validate-circle-orb
 
 publish-all: publish-release-circle-orb
 
+# Configure Docker authentication for GitHub Container Registry
+ghcr-login:
+	@echo "Logging in to GitHub Container Registry..."
+	@echo "Make sure you have a GitHub Personal Access Token with 'read:packages' and 'write:packages' scopes"
+	@echo "Set your token as GITHUB_TOKEN environment variable"
+	@echo $${GITHUB_TOKEN} | docker login ghcr.io -u $${GITHUB_USERNAME} --password-stdin
+	@echo "Login successful!"
+
 clean:
 	rm -rf out/
 	rm -f build/pacakge/cmd/bucketeer-find-code-refs
@@ -83,4 +91,4 @@ test-publish:
 products-for-release:
 	$(RELEASE_CMD) --skip-publish --skip-validate
 
-.PHONY: init test lint compile-github-actions-binary compile-macos-binary compile-linux-binary compile-windows-binary compile-bitbucket-pipelines-binary echo-release-notes publish-dev-circle-orb publish-release-circle-orb publish-all clean build
+.PHONY: init test lint compile-github-actions-binary compile-macos-binary compile-linux-binary compile-windows-binary compile-bitbucket-pipelines-binary echo-release-notes publish-dev-circle-orb publish-release-circle-orb publish-all clean build ghcr-login

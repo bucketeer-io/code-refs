@@ -97,10 +97,21 @@ release:
 dockers:
   -
     image_templates:
-    - "bucketeer/bucketeer-find-code-refs:latest"
-    - "bucketeer/bucketeer-find-code-refs:{{ .Version }}"
+    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs:latest"
+    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs:{{ .Version }}"
 
     dockerfile: Dockerfile
+    
+    # GitHub Container Registry authentication settings
+    build_flag_templates:
+    - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+    - "--label=org.opencontainers.image.description=Job for finding and sending feature flag code references to Bucketeer"
+    - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
+    - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
+    - "--label=org.opencontainers.image.version={{ .Version }}"
+    - "--label=org.opencontainers.image.created={{ .Date }}"
+    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+    - "--label=org.opencontainers.image.licenses=Apache-2.0"
 
   -
     goos: linux
@@ -111,10 +122,22 @@ dockers:
     - bucketeer-find-code-refs-github-action
 
     image_templates:
-    - "bucketeer/bucketeer-find-code-refs-github-action:latest"
-    - "bucketeer/bucketeer-find-code-refs-github-action:{{ .Version }}"
+    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-github-action:latest"
+    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-github-action:{{ .Version }}"
 
     dockerfile: Dockerfile.github
+    
+    # GitHub Container Registry authentication settings
+    build_flag_templates:
+    - "--label=org.opencontainers.image.title={{ .ProjectName }}-github-action"
+    - "--label=org.opencontainers.image.description=GitHub Action for finding and sending feature flag code references to Bucketeer"
+    - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
+    - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
+    - "--label=org.opencontainers.image.version={{ .Version }}"
+    - "--label=org.opencontainers.image.created={{ .Date }}"
+    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+    - "--label=org.opencontainers.image.licenses=Apache-2.0"
+    
   -
     goos: linux
 
@@ -122,10 +145,21 @@ dockers:
     goarch: amd64
 
     image_templates:
-    - "bucketeer/bucketeer-find-code-refs-bitbucket-pipeline:latest"
-    - "bucketeer/bucketeer-find-code-refs-bitbucket-pipeline:{{ .Version }}"
+    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-bitbucket-pipeline:latest"
+    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-bitbucket-pipeline:{{ .Version }}"
 
     ids:
     - bucketeer-find-code-refs-bitbucket-pipeline
 
     dockerfile: Dockerfile.bitbucket
+    
+    # GitHub Container Registry authentication settings
+    build_flag_templates:
+    - "--label=org.opencontainers.image.title={{ .ProjectName }}-bitbucket-pipeline"
+    - "--label=org.opencontainers.image.description=Bitbucket Pipeline for finding and sending feature flag code references to Bucketeer"
+    - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
+    - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
+    - "--label=org.opencontainers.image.version={{ .Version }}"
+    - "--label=org.opencontainers.image.created={{ .Date }}"
+    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+    - "--label=org.opencontainers.image.licenses=Apache-2.0"
