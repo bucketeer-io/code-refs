@@ -1,14 +1,14 @@
-FROM alpine:3.21.0
+FROM alpine:3.19
 
 RUN apk update
 RUN apk add --no-cache git
 
-COPY ld-find-code-refs-github-action /ld-find-code-refs-github-action
+COPY bucketeer-find-code-refs-github-action /bucketeer-find-code-refs-github-action
 
-LABEL com.github.actions.name="LaunchDarkly Code References"
+LABEL com.github.actions.name="Bucketeer Code References"
 LABEL com.github.actions.description="Find references to feature flags in your code."
 LABEL com.github.actions.icon="toggle-right"
 LABEL com.github.actions.color="gray-dark"
-LABEL homepage="https://www.launchdarkly.com"
+LABEL homepage="https://bucketeer.io"
 
-ENTRYPOINT ["/ld-find-code-refs-github-action"]
+ENTRYPOINT ["/bucketeer-find-code-refs-github-action"]

@@ -78,7 +78,7 @@ publish:
 	$(RELEASE_CMD)
 
 test-publish:
-	curl -sL https://git.io/goreleaser | VERSION=$(GORELEASER_VERSION) bash -s -- --clean --skip-publish --skip-validate
+	curl -sL https://git.io/goreleaser | VERSION=$(GORELEASER_VERSION) bash -s -- --clean --skip-publish --skip-validate --snapshot
 
 products-for-release:
 	$(RELEASE_CMD) --skip-publish --skip-validate
