@@ -1,0 +1,50 @@
+name: GoReleaser Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20
+
+      # Retrieve the release notes from the release-please generated release
+      - name: Get release notes from GitHub
+        id: get_release_notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract the tag name from the Git ref (e.g. refs/tags/v1.0.0 -> v1.0.0)
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "Fetching release notes for tag: $TAG_NAME"
+          RELEASE_NOTES=$(curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}" | jq -r '.body')
+          if [ -z "$RELEASE_NOTES" ]; then
+            echo "No release notes found for tag $TAG_NAME, using a default message."
+            RELEASE_NOTES="Release $TAG_NAME"
+          fi
+          # Set the RELEASE_NOTES as an environment variable for later steps
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Run GoReleaser
+        env:
+          GORELEASER_VERSION: "1.17.0"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ env.RELEASE_NOTES }}
+        run: |
+          curl -sfL https://git.io/goreleaser | \
+            GOPATH=$(mktemp -d) \
+            VERSION=$GORELEASER_VERSION \
+            GITHUB_TOKEN=$GITHUB_TOKEN \
+            bash -s -- --clean --replace --release-notes "$RELEASE_NOTES"
