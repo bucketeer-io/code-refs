@@ -1,7 +1,8 @@
-module github.com/launchdarkly/ld-find-code-refs/v2
+module github.com/bucketeer-io/code-refs
 
-go 1.22
-toolchain go1.22.5
+go 1.22.0
+
+toolchain go1.22.8
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.7.1
@@ -19,7 +20,10 @@ require (
 	golang.org/x/tools v0.28.0
 )
 
-require github.com/launchdarkly/api-client-go/v15 v15.1.0
+require (
+	github.com/cenkalti/backoff/v4 v4.3.0
+	github.com/launchdarkly/api-client-go/v15 v15.1.0
+)
 
 require (
 	dario.cat/mergo v1.0.0 // indirect

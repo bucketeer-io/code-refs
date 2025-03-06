@@ -1,126 +1,196 @@
 package coderefs
 
 import (
+	"context"
+	"encoding/csv"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/git"
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/helpers"
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/ld"
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/log"
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/validation"
-	"github.com/launchdarkly/ld-find-code-refs/v2/options"
-	"github.com/launchdarkly/ld-find-code-refs/v2/search"
+	"github.com/bucketeer-io/code-refs/internal/bucketeer"
+	"github.com/bucketeer-io/code-refs/internal/git"
+	"github.com/bucketeer-io/code-refs/internal/helpers"
+	"github.com/bucketeer-io/code-refs/internal/log"
+	"github.com/bucketeer-io/code-refs/internal/validation"
+	"github.com/bucketeer-io/code-refs/options"
+	"github.com/bucketeer-io/code-refs/search"
 )
 
 func Run(opts options.Options, output bool) {
-	if len(opts.ProjKey) > 0 {
-		opts.Projects = append(opts.Projects, options.Project{
-			Key: opts.ProjKey,
-		})
-	}
 	absPath, err := validation.NormalizeAndValidatePath(opts.Dir)
 	if err != nil {
 		log.Error.Fatalf("could not validate directory option: %s", err)
 	}
 
 	log.Info.Printf("absolute directory path: %s", absPath)
-	ldApi := ld.InitApiClient(ld.ApiOptions{ApiKey: opts.AccessToken, BaseUri: opts.BaseUri, UserAgent: helpers.GetUserAgent(opts.UserAgent)})
 
-	branchName := opts.Branch
-	revision := opts.Revision
-	var gitClient *git.Client
-	var commitTime int64
+	totalEnvs := len(opts.ApiKey)
+	log.Info.Printf("Processing %d api key(s)", totalEnvs)
+
+	// Process each API key
+	for i, apiKey := range opts.ApiKey {
+		log.Info.Printf("Processing api key %d/%d", i+1, totalEnvs)
+
+		// Create a copy of options with current API key
+		currentOpts := opts
+		currentOpts.ApiKey = []string{apiKey}
+
+		bucketeerApi := initializeAPI(currentOpts)
+		branchName, revision := setupGitInfo(currentOpts, absPath)
+		repoType := determineRepoType(currentOpts.RepoType)
+
+		matcher, refs := search.Scan(currentOpts, absPath)
+		if output {
+			generateOutput(currentOpts, matcher, refs)
+		}
+
+		if !currentOpts.DryRun {
+			processCodeReferences(currentOpts, bucketeerApi, refs, branchName, revision, repoType)
+		}
+	}
+}
+
+//nolint:ireturn // This function returns an interface for testing/mocking purposes
+func initializeAPI(opts options.Options) bucketeer.ApiClient {
+	return bucketeer.InitApiClient(bucketeer.ApiOptions{
+		ApiKey:      opts.ApiKey[0],
+		ApiEndpoint: opts.ApiEndpoint,
+		UserAgent:   helpers.GetUserAgent(opts.UserAgent),
+	})
+}
+
+func setupGitInfo(opts options.Options, absPath string) (branchName, revision string) {
+	branchName = opts.Branch
+	revision = opts.Revision
 	if revision == "" {
-		gitClient, err = git.NewClient(absPath, branchName, opts.AllowTags)
+		gitClient, err := git.NewClient(absPath, branchName, opts.AllowTags)
 		if err != nil {
 			log.Error.Fatalf("%s", err)
 		}
 		branchName = gitClient.GitBranch
 		revision = gitClient.GitSha
-		commitTime = gitClient.GitTimestamp
 	}
-
-	repoParams := ld.RepoParams{
-		Type:              opts.RepoType,
-		Name:              opts.RepoName,
-		Url:               opts.RepoUrl,
-		CommitUrlTemplate: opts.CommitUrlTemplate,
-		HunkUrlTemplate:   opts.HunkUrlTemplate,
-		DefaultBranch:     opts.DefaultBranch,
-	}
-
-	matcher, refs := search.Scan(opts, repoParams, absPath)
-
-	var updateId *int
-	if opts.UpdateSequenceId >= 0 {
-		updateIdOption := opts.UpdateSequenceId
-		updateId = &updateIdOption
-	}
-
-	branch := ld.BranchRep{
-		Name:             strings.TrimPrefix(branchName, "refs/heads/"),
-		Head:             revision,
-		UpdateSequenceId: updateId,
-		SyncTime:         helpers.MakeTimestamp(),
-		References:       refs,
-		CommitTime:       commitTime,
-	}
-
-	if output {
-		generateHunkOutput(opts, matcher, branch, repoParams, ldApi)
-	}
-
-	if gitClient != nil {
-		runExtinctions(opts, matcher, branch, repoParams, gitClient, ldApi)
-	}
+	return branchName, revision
 }
 
-func Prune(opts options.Options, branches []string) {
-	ldApi := ld.InitApiClient(ld.ApiOptions{ApiKey: opts.AccessToken, BaseUri: opts.BaseUri, UserAgent: helpers.GetUserAgent(opts.UserAgent)})
-	err := ldApi.PostDeleteBranchesTask(opts.RepoName, branches)
-	if err != nil {
-		helpers.FatalServiceError(err, opts.IgnoreServiceErrors)
+func determineRepoType(repoType string) string {
+	repoType = strings.ToUpper(repoType)
+	if repoType != "GITHUB" && repoType != "GITLAB" && repoType != "BITBUCKET" {
+		repoType = "CUSTOM"
 	}
+	return repoType
 }
 
-func deleteStaleBranches(ldApi ld.ApiClient, repoName string, remoteBranches map[string]bool) error {
-	branches, err := ldApi.GetCodeReferenceRepositoryBranches(repoName)
-	if err != nil {
-		return err
-	}
+func processCodeReferences(
+	opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	refs []bucketeer.ReferenceHunksRep,
+	branchName, revision, repoType string,
+) {
+	existingRefs := fetchExistingReferences(opts, bucketeerApi, refs)
+	processNewReferences(opts, bucketeerApi, refs, existingRefs, branchName, revision, repoType)
+	deleteStaleReferences(opts, bucketeerApi, existingRefs)
+}
 
-	staleBranches := calculateStaleBranches(branches, remoteBranches)
-	if len(staleBranches) > 0 {
-		log.Debug.Printf("marking stale branches for code reference pruning: %v", staleBranches)
-		err = ldApi.PostDeleteBranchesTask(repoName, staleBranches)
+func fetchExistingReferences(
+	opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	refs []bucketeer.ReferenceHunksRep,
+) map[string]bucketeer.CodeReference {
+	existingRefs := make(map[string]bucketeer.CodeReference)
+	flagCounts := aggregateFeatureFlags(refs)
+
+	for flag := range flagCounts {
+		codeRefs, _, _, err := bucketeerApi.ListCodeReferences(context.Background(), opts, flag, bucketeer.DefaultPageSize)
 		if err != nil {
-			return err
+			helpers.FatalServiceError(
+				fmt.Errorf("error getting existing code references from Bucketeer for flag %s: %w", flag, err),
+				opts.IgnoreServiceErrors,
+			)
+		}
+
+		for _, ref := range codeRefs {
+			existingRefs[ref.ContentHash] = ref
 		}
 	}
-
-	return nil
+	return existingRefs
 }
 
-func calculateStaleBranches(branches []ld.BranchRep, remoteBranches map[string]bool) []string {
-	staleBranches := []string{}
-	for _, branch := range branches {
-		if !remoteBranches[branch.Name] {
-			staleBranches = append(staleBranches, branch.Name)
+func processNewReferences(
+	opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	refs []bucketeer.ReferenceHunksRep,
+	existingRefs map[string]bucketeer.CodeReference,
+	branchName, revision, repoType string,
+) {
+	for _, ref := range refs {
+		for _, hunk := range ref.Hunks {
+			codeRef := createCodeReference(opts, hunk, ref, branchName, revision, repoType)
+			updateOrCreateReference(opts, bucketeerApi, codeRef, existingRefs)
 		}
 	}
-	log.Info.Printf("found %d stale branches to be marked for code reference pruning", len(staleBranches))
-	return staleBranches
 }
 
-func generateHunkOutput(opts options.Options, matcher search.Matcher, branch ld.BranchRep, repoParams ld.RepoParams, ldApi ld.ApiClient) {
+func createCodeReference(opts options.Options,
+	hunk bucketeer.HunkRep,
+	ref bucketeer.ReferenceHunksRep,
+	branchName, revision, repoType string,
+) bucketeer.CodeReference {
+	return bucketeer.CodeReference{
+		FeatureID:        hunk.FlagKey,
+		FilePath:         ref.Path,
+		FileExtension:    hunk.FileExt,
+		LineNumber:       hunk.StartingLineNumber,
+		CodeSnippet:      hunk.Lines,
+		ContentHash:      hunk.ContentHash,
+		Aliases:          hunk.Aliases,
+		RepositoryName:   opts.RepoName,
+		RepositoryOwner:  opts.RepoOwner,
+		RepositoryType:   repoType,
+		RepositoryBranch: strings.TrimPrefix(branchName, "refs/heads/"),
+		CommitHash:       revision,
+	}
+}
+
+func updateOrCreateReference(opts options.Options,
+	bucketeerApi bucketeer.ApiClient,
+	codeRef bucketeer.CodeReference,
+	existingRefs map[string]bucketeer.CodeReference,
+) {
+	if existing, exists := existingRefs[codeRef.ContentHash]; exists {
+		log.Info.Printf("updating code reference in Bucketeer: id: %s, content hash: %s", existing.ID, codeRef.ContentHash)
+		err := bucketeerApi.UpdateCodeReference(context.Background(), opts, existing.ID, codeRef)
+		if err != nil {
+			helpers.FatalServiceError(fmt.Errorf("error updating code reference in Bucketeer: %w", err), opts.IgnoreServiceErrors)
+		}
+		delete(existingRefs, codeRef.ContentHash)
+	} else {
+		err := bucketeerApi.CreateCodeReference(context.Background(), opts, codeRef)
+		if err != nil {
+			helpers.FatalServiceError(fmt.Errorf("error sending code reference to Bucketeer: %w", err), opts.IgnoreServiceErrors)
+		}
+	}
+}
+
+func deleteStaleReferences(opts options.Options, bucketeerApi bucketeer.ApiClient, existingRefs map[string]bucketeer.CodeReference) {
+	for _, ref := range existingRefs {
+		if ref.RepositoryOwner == opts.RepoOwner && ref.RepositoryName == opts.RepoName {
+			err := bucketeerApi.DeleteCodeReference(context.Background(), opts, ref.ID)
+			if err != nil {
+				helpers.FatalServiceError(fmt.Errorf("error deleting code reference from Bucketeer: %w", err), opts.IgnoreServiceErrors)
+			}
+			log.Info.Printf("deleted code reference from Bucketeer: %+v", ref)
+		}
+	}
+}
+
+func generateOutput(opts options.Options, matcher search.Matcher, refs []bucketeer.ReferenceHunksRep) {
 	outDir := opts.OutDir
-	projectKeys := make([]string, 1)
-	for _, project := range opts.Projects {
-		projectKeys = append(projectKeys, project.Key)
-	}
 	if outDir != "" {
-		outPath, err := branch.WriteToCSV(outDir, projectKeys[0], repoParams.Name, opts.Revision)
+		outPath, err := writeToCSV(outDir, opts.RepoName, opts.Revision, refs)
 		if err != nil {
 			log.Error.Fatalf("error writing code references to csv: %s", err)
 		}
@@ -128,81 +198,103 @@ func generateHunkOutput(opts options.Options, matcher search.Matcher, branch ld.
 	}
 
 	if opts.Debug {
-		branch.PrintReferenceCountTable()
+		printReferenceCountTable(refs)
 	}
 
 	if opts.DryRun {
-		totalFlags := 0
-		for _, searchElems := range matcher.Elements {
-			totalFlags += len(searchElems.Elements)
+		totalHunks := 0
+		for _, ref := range refs {
+			totalHunks += len(ref.Hunks)
 		}
 		log.Info.Printf(
 			"dry run found %d code references across %d flags and %d files",
-			branch.TotalHunkCount(),
-			totalFlags,
-			len(branch.References),
+			totalHunks,
+			len(matcher.Element.Elements),
+			len(refs),
 		)
 		return
 	}
 
 	log.Info.Printf(
-		"sending %d code references across %d flags and %d files to LaunchDarkly for project(s): %s",
-		branch.TotalHunkCount(),
-		len(matcher.Elements[0].Elements),
-		len(branch.References),
-		projectKeys,
+		"sending %d code references across %d flags and %d files to Bucketeer",
+		getTotalHunkCount(refs),
+		len(matcher.Element.Elements),
+		len(refs),
 	)
-	err := ldApi.PutCodeReferenceBranch(branch, repoParams.Name)
-	switch {
-	case err == ld.BranchUpdateSequenceIdConflictErr:
-		if branch.UpdateSequenceId != nil {
-			log.Warning.Printf("updateSequenceId (%d) must be greater than previously submitted updateSequenceId", *branch.UpdateSequenceId)
-		}
-	case err == ld.EntityTooLargeErr:
-		log.Error.Fatalf("code reference payload too large for LaunchDarkly API - consider excluding more files with .ldignore or using fewer lines of context")
-	case err != nil:
-		helpers.FatalServiceError(fmt.Errorf("error sending code references to LaunchDarkly: %w", err), opts.IgnoreServiceErrors)
-	}
 }
 
-func runExtinctions(opts options.Options, matcher search.Matcher, branch ld.BranchRep, repoParams ld.RepoParams, gitClient *git.Client, ldApi ld.ApiClient) {
-	if opts.Lookback > 0 {
-		var removedFlags []ld.ExtinctionRep
+func getTotalHunkCount(refs []bucketeer.ReferenceHunksRep) int {
+	total := 0
+	for _, ref := range refs {
+		total += len(ref.Hunks)
+	}
+	return total
+}
 
-		flagCounts := branch.CountByProjectAndFlag(matcher.GetElements(), opts.GetProjectKeys())
-		for _, project := range opts.Projects {
-			missingFlags := []string{}
-			for flag, count := range flagCounts[project.Key] {
-				if count == 0 {
-					missingFlags = append(missingFlags, flag)
-				}
-			}
-			log.Info.Printf("checking if %d flags without references were removed in the last %d commits for project: %s", len(missingFlags), opts.Lookback, project.Key)
-			removedFlagsByProject, err := gitClient.FindExtinctions(project, missingFlags, matcher, opts.Lookback+1)
+func writeToCSV(outDir, repoName, revision string, refs []bucketeer.ReferenceHunksRep) (string, error) {
+	timestamp := time.Now().Unix()
+	filename := fmt.Sprintf("code-references-%s-%s-%d.csv", repoName, revision, timestamp)
+	outPath := filepath.Join(outDir, filename)
+
+	file, err := os.Create(outPath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write header
+	err = writer.Write([]string{
+		"Flag Key",
+		"File Path",
+		"File Extension",
+		"Line Number",
+		"Code Snippet",
+		"Content Hash",
+		"Aliases",
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Write data
+	for _, ref := range refs {
+		for _, hunk := range ref.Hunks {
+			err := writer.Write([]string{
+				hunk.FlagKey,
+				ref.Path,
+				hunk.FileExt,
+				strconv.Itoa(hunk.StartingLineNumber),
+				hunk.Lines,
+				hunk.ContentHash,
+				strings.Join(hunk.Aliases, "|"),
+			})
 			if err != nil {
-				log.Warning.Printf("unable to generate flag extinctions: %s", err)
-			} else {
-				log.Info.Printf("found %d removed flags", len(removedFlagsByProject))
-			}
-			removedFlags = append(removedFlags, removedFlagsByProject...)
-		}
-		if len(removedFlags) > 0 && !opts.DryRun {
-			err := ldApi.PostExtinctionEvents(removedFlags, repoParams.Name, branch.Name)
-			if err != nil {
-				log.Error.Printf("error sending extinction events to LaunchDarkly: %s", err)
+				return "", err
 			}
 		}
 	}
-	if !opts.DryRun && opts.Prune {
-		log.Info.Printf("attempting to prune old code reference data from LaunchDarkly")
-		remoteBranches, err := gitClient.RemoteBranches()
-		if err != nil {
-			log.Warning.Printf("unable to retrieve branch list from remote, skipping code reference pruning: %s", err)
-		} else {
-			err = deleteStaleBranches(ldApi, repoParams.Name, remoteBranches)
-			if err != nil {
-				helpers.FatalServiceError(fmt.Errorf("failed to mark old branches for code reference pruning: %w", err), opts.IgnoreServiceErrors)
-			}
+
+	return outPath, nil
+}
+
+// aggregateFeatureFlags returns a map of feature flags and their counts from the references
+func aggregateFeatureFlags(refs []bucketeer.ReferenceHunksRep) map[string]int {
+	flagCounts := make(map[string]int)
+	for _, ref := range refs {
+		for _, hunk := range ref.Hunks {
+			flagCounts[hunk.FlagKey]++
 		}
+	}
+	return flagCounts
+}
+
+func printReferenceCountTable(refs []bucketeer.ReferenceHunksRep) {
+	flagCounts := aggregateFeatureFlags(refs)
+	log.Info.Printf("Flag Reference Counts:")
+	for flag, count := range flagCounts {
+		log.Info.Printf("  %s: %d", flag, count)
 	}
 }

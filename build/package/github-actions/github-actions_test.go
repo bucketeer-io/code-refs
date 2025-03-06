@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/log"
-	o "github.com/launchdarkly/ld-find-code-refs/v2/options"
+	"github.com/bucketeer-io/code-refs/internal/log"
+	o "github.com/bucketeer-io/code-refs/options"
 )
 
 func TestMain(m *testing.M) {
@@ -121,9 +121,8 @@ func TestParseBranch(t *testing.T) {
 func TestMergeGithubOptions_withCliRepoName(t *testing.T) {
 	os.Setenv("GITHUB_REF", "refs/heads/test")
 	var options o.Options = o.Options{
-		AccessToken: "deaf-beef",
-		ProjKey:     "project-x",
-		RepoName:    "myapp-react",
+		ApiKey:   []string{"deaf-beef"},
+		RepoName: "myapp-react",
 	}
 	result, _ := mergeGithubOptions(options)
 	assert.Equal(t, "myapp-react", result.RepoName)
@@ -133,8 +132,7 @@ func TestMergeGithubOptions_withGithubRepoName(t *testing.T) {
 	os.Setenv("GITHUB_REPOSITORY", "yusinto/myapp-golang")
 	os.Setenv("GITHUB_REF", "refs/heads/test")
 	var options o.Options = o.Options{
-		AccessToken: "deaf-beef",
-		ProjKey:     "project-x",
+		ApiKey: []string{"deaf-beef"},
 	}
 	result, _ := mergeGithubOptions(options)
 	assert.Equal(t, "myapp-golang", result.RepoName)

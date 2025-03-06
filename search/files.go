@@ -11,7 +11,7 @@ import (
 	"github.com/monochromegane/go-gitignore"
 	"golang.org/x/tools/godoc/util"
 
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/validation"
+	"github.com/bucketeer-io/code-refs/internal/validation"
 )
 
 type ignore struct {
@@ -66,7 +66,7 @@ func readFileLines(path string) ([]string, error) {
 
 func readFiles(ctx context.Context, files chan<- file, workspace string) error {
 	defer close(files)
-	ignoreFiles := []string{".gitignore", ".ignore", ".ldignore"}
+	ignoreFiles := []string{".gitignore", ".ignore"}
 	allIgnores := newIgnore(workspace, ignoreFiles)
 	workspace = filepath.ToSlash(workspace)
 
@@ -108,7 +108,12 @@ func readFiles(ctx context.Context, files chan<- file, workspace string) error {
 			return nil
 		}
 
-		files <- file{path: strings.TrimPrefix(path, workspace+"/"), lines: lines}
+		relativePath := strings.TrimPrefix(path, workspace+"/")
+		files <- file{
+			path:    relativePath,
+			lines:   lines,
+			fileExt: strings.TrimPrefix(filepath.Ext(relativePath), "."),
+		}
 		return nil
 	}
 

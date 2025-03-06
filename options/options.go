@@ -13,11 +13,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/validation"
-)
-
-const (
-	maxProjKeyLength = 20 // Maximum project key length
+	"github.com/bucketeer-io/code-refs/internal/validation"
 )
 
 type RepoType string
@@ -44,35 +40,31 @@ type Project struct {
 	Aliases []Alias `mapstructure:"aliases"`
 }
 type Options struct {
-	AccessToken         string `mapstructure:"accessToken"`
-	BaseUri             string `mapstructure:"baseUri"`
-	Branch              string `mapstructure:"branch"`
-	CommitUrlTemplate   string `mapstructure:"commitUrlTemplate"`
-	DefaultBranch       string `mapstructure:"defaultBranch"`
-	Dir                 string `mapstructure:"dir" yaml:"-"`
-	HunkUrlTemplate     string `mapstructure:"hunkUrlTemplate"`
-	OutDir              string `mapstructure:"outDir"`
-	ProjKey             string `mapstructure:"projkey"`
-	RepoName            string `mapstructure:"repoName"`
-	RepoType            string `mapstructure:"repoType"`
-	RepoUrl             string `mapstructure:"repoUrl"`
-	Revision            string `mapstructure:"revision"`
-	Subdirectory        string `mapstructure:"subdirectory"`
-	UserAgent           string `mapstructure:"userAgent"`
-	ContextLines        int    `mapstructure:"contextLines"`
-	Lookback            int    `mapstructure:"lookback"`
-	UpdateSequenceId    int    `mapstructure:"updateSequenceId"`
-	AllowTags           bool   `mapstructure:"allowTags"`
-	Debug               bool   `mapstructure:"debug"`
-	DryRun              bool   `mapstructure:"dryRun"`
-	IgnoreServiceErrors bool   `mapstructure:"ignoreServiceErrors"`
-	Prune               bool   `mapstructure:"prune"`
+	ApiKey              []string `mapstructure:"apiKey"`
+	ApiEndpoint         string   `mapstructure:"apiEndpoint"`
+	Branch              string   `mapstructure:"branch"`
+	CommitUrlTemplate   string   `mapstructure:"commitUrlTemplate"`
+	DefaultBranch       string   `mapstructure:"defaultBranch"`
+	Dir                 string   `mapstructure:"dir" yaml:"-"`
+	OutDir              string   `mapstructure:"outDir"`
+	RepoOwner           string   `mapstructure:"repoOwner"`
+	RepoName            string   `mapstructure:"repoName"`
+	RepoType            string   `mapstructure:"repoType"`
+	RepoUrl             string   `mapstructure:"repoUrl"`
+	Revision            string   `mapstructure:"revision"`
+	Subdirectory        string   `mapstructure:"subdirectory"`
+	UserAgent           string   `mapstructure:"userAgent"`
+	ContextLines        int      `mapstructure:"contextLines"`
+	UpdateSequenceId    int      `mapstructure:"updateSequenceId"`
+	AllowTags           bool     `mapstructure:"allowTags"`
+	Debug               bool     `mapstructure:"debug"`
+	DryRun              bool     `mapstructure:"dryRun"`
+	IgnoreServiceErrors bool     `mapstructure:"ignoreServiceErrors"`
+	Prune               bool     `mapstructure:"prune"`
 
 	// The following options can only be configured via YAML configuration
-
 	Aliases    []Alias    `mapstructure:"aliases"`
 	Delimiters Delimiters `mapstructure:"delimiters"`
-	Projects   []Project  `mapstructure:"projects"`
 }
 
 type Delimiters struct {
@@ -91,11 +83,13 @@ func Init(flagSet *pflag.FlagSet) error {
 			flagSet.IntP(f.name, f.short, value, usage)
 		case bool:
 			flagSet.BoolP(f.name, f.short, value, usage)
+		case []string:
+			flagSet.StringSlice(f.name, value, usage)
 		}
 	}
 
 	flagSet.VisitAll(func(f *pflag.Flag) {
-		viper.BindEnv(f.Name, "LD_"+strcase.ToScreamingSnake(f.Name))
+		viper.BindEnv(f.Name, "BUCKETEER_"+strcase.ToScreamingSnake(f.Name))
 	})
 
 	return viper.BindPFlags(flagSet)
@@ -113,7 +107,7 @@ func InitYAML() error {
 	subdirectoryPath := viper.GetString("subdirectory")
 	viper.SetConfigName("coderefs")
 	viper.SetConfigType("yaml")
-	configPath := filepath.Join(absPath, subdirectoryPath, ".launchdarkly")
+	configPath := filepath.Join(absPath, subdirectoryPath, ".bucketeer")
 	viper.AddConfigPath(configPath)
 	err = viper.ReadInConfig()
 	if err != nil && !errors.As(err, &viper.ConfigFileNotFoundError{}) {
@@ -124,11 +118,15 @@ func InitYAML() error {
 
 // validatePreconditions ensures required flags have been set
 func validateYAMLPreconditions() error {
-	token := viper.GetString("accessToken")
+	apiEndpoint := viper.GetString("apiEndpoint")
+	apiKeys := viper.GetStringSlice("apiKey")
 	dir := viper.GetString("dir")
 	missingRequiredOptions := []string{}
-	if token == "" {
-		missingRequiredOptions = append(missingRequiredOptions, "accessToken")
+	if apiEndpoint == "" {
+		missingRequiredOptions = append(missingRequiredOptions, "apiEndpoint")
+	}
+	if len(apiKeys) == 0 {
+		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
 	}
 	if dir == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "dir")
@@ -154,10 +152,25 @@ func GetWrapperOptions(dir string, merge func(Options) (Options, error)) (Option
 	}
 
 	// Set precondition flags
-	err = flags.Set("accessToken", os.Getenv("LD_ACCESS_TOKEN"))
-	if err != nil {
-		return Options{}, err
+	apiKey := os.Getenv("BUCKETEER_APIKEY")
+	if apiKey != "" {
+		err = flags.Set("apiKey", apiKey)
+		if err != nil {
+			return Options{}, err
+		}
 	}
+
+	// Handle multiple API keys from environment
+	apiKeys := os.Getenv("BUCKETEER_APIKEY")
+	if apiKeys != "" {
+		for _, key := range strings.Split(apiKeys, ",") {
+			err = flags.Set("apiKey", strings.TrimSpace(key))
+			if err != nil {
+				return Options{}, err
+			}
+		}
+	}
+
 	err = flags.Set("dir", dir)
 	if err != nil {
 		return Options{}, err
@@ -178,39 +191,23 @@ func GetWrapperOptions(dir string, merge func(Options) (Options, error)) (Option
 
 func (o Options) ValidateRequired() error {
 	missingRequiredOptions := []string{}
-	if o.AccessToken == "" {
-		missingRequiredOptions = append(missingRequiredOptions, "accessToken")
+	if len(o.ApiKey) == 0 {
+		missingRequiredOptions = append(missingRequiredOptions, "apiKey")
+	}
+	if o.ApiEndpoint == "" {
+		missingRequiredOptions = append(missingRequiredOptions, "apiEndpoint")
 	}
 	if o.Dir == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "dir")
 	}
-	if o.ProjKey == "" && len(o.Projects) == 0 {
-		missingRequiredOptions = append(missingRequiredOptions, "projKey/projects")
+	if o.RepoOwner == "" {
+		missingRequiredOptions = append(missingRequiredOptions, "repoOwner")
 	}
 	if o.RepoName == "" {
 		missingRequiredOptions = append(missingRequiredOptions, "repoName")
 	}
 	if len(missingRequiredOptions) > 0 {
 		return fmt.Errorf("missing required option(s): %v", missingRequiredOptions)
-	}
-
-	if len(o.ProjKey) > 0 && len(o.Projects) > 0 {
-		return errors.New("`--projKey` cannot be combined with `projects` in configuration")
-	}
-
-	if len(o.ProjKey) > maxProjKeyLength {
-		return projKeyValidation(o.ProjKey)
-	}
-
-	if len(o.Projects) > 0 {
-		for _, project := range o.Projects {
-			if len(project.Key) > maxProjKeyLength {
-				err := projKeyValidation(project.Key)
-				if err != nil {
-					return err
-				}
-			}
-		}
 	}
 
 	return nil
@@ -266,33 +263,5 @@ func (o Options) Validate() error {
 		return errors.New(`"branch" option is required when "revision" option is set`)
 	}
 
-	if len(o.Projects) > 0 {
-		for _, project := range o.Projects {
-			if project.Dir == "" {
-				return nil
-			}
-			if err := validation.IsSubDirValid(o.Dir, project.Dir); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
-}
-
-func projKeyValidation(projKey string) error {
-	if strings.HasPrefix(projKey, "sdk-") {
-		return fmt.Errorf("provided project key (%s) appears to be a LaunchDarkly SDK key", "sdk-xxxx")
-	} else if strings.HasPrefix(projKey, "api-") {
-		return fmt.Errorf("provided project key (%s) appears to be a LaunchDarkly API access token", "api-xxxx")
-	}
-
-	return nil
-}
-
-func (o Options) GetProjectKeys() (projects []string) {
-	for _, project := range o.Projects {
-		projects = append(projects, project.Key)
-	}
-	return projects
 }
