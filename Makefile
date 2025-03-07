@@ -1,8 +1,5 @@
-# Note: These commands pertain to the development of bucketeer-find-code-refs.
-#       They are not intended for use by the end-users of this program.
-SHELL=/bin/bash
-GORELEASER_VERSION=v1.20.0
-
+# Note: These commands are for the development of bucketeer-find-code-refs.
+# They are not intended for use by the end-users of this program.
 build:
 	go build ./cmd/...
 
@@ -80,10 +77,13 @@ clean:
 	rm -f build/package/github-actions/bucketeer-find-code-refs-github-action
 	rm -f build/package/bitbucket-pipelines/bucketeer-find-code-refs-bitbucket-pipeline
 
-RELEASE_CMD=curl -sL https://git.io/goreleaser | GOPATH=$(mktemp -d) VERSION=$(GORELEASER_VERSION) GITHUB_TOKEN=$(GITHUB_TOKEN) bash -s -- --clean --release-notes $(RELEASE_NOTES)
+GORELEASER_VERSION=v2.7.0
 
 publish:
-	$(RELEASE_CMD)
+	curl -sL https://git.io/goreleaser | \
+		VERSION=$(GORELEASER_VERSION) \
+		GITHUB_TOKEN=$(GITHUB_TOKEN) \
+		bash -s -- --clean --skip=validate
 
 test-publish:
 	curl -sL https://git.io/goreleaser | VERSION=$(GORELEASER_VERSION) bash -s -- --clean --skip-publish --skip-validate --snapshot

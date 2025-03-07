@@ -1,6 +1,5 @@
 builds:
-  -
-    binary: bucketeer-find-code-refs
+  - binary: bucketeer-find-code-refs
     id: bucketeer-find-code-refs
     main: ./cmd/bucketeer-find-code-refs/
     env:
@@ -17,8 +16,7 @@ builds:
     ignore:
       - goos: darwin
         goarch: "386"
-  -
-    binary: bucketeer-find-code-refs-github-action
+  - binary: bucketeer-find-code-refs-github-action
     id: bucketeer-find-code-refs-github-action
     main: ./build/package/github-actions/
     env:
@@ -27,8 +25,7 @@ builds:
       - linux
     goarch:
       - "amd64"
-  -
-    binary: bucketeer-find-code-refs-bitbucket-pipeline
+  - binary: bucketeer-find-code-refs-bitbucket-pipeline
     id: bucketeer-find-code-refs-bitbucket-pipeline
     main: ./build/package/bitbucket-pipelines/
     env:
@@ -39,127 +36,116 @@ builds:
       - "amd64"
 
 archives:
-  -
-    id: bucketeer-find-code-refs
+  - id: bucketeer-find-code-refs
     builds:
-    - bucketeer-find-code-refs
+      - bucketeer-find-code-refs
 
 nfpms:
-  -
-    id: bucketeer-find-code-refs
+  - id: bucketeer-find-code-refs
     file_name_template: >-
       {{- .ProjectName -}}_
       {{- .Version -}}.
       {{- if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end -}}
 
-    homepage: https://bucketeer.io/
+    homepage: https://bucketeer.io
     maintainer: Bucketeer <bucketeer@cyberagent.co.jp>
-    description: Job for finding and sending feature flag code references to Bucketeer
+    description: Bucketeer Code References. This tool will find and send feature flag code references to Bucketeer's backend.
     license: Apache 2.0
     vendor: Bucketeer
 
     formats:
-    - deb
-    - rpm
+      - deb
+      - rpm
 
 brews:
-  -
+  - name: bucketeer-find-code-refs
+    description: Bucketeer Code References. This tool will find and send feature flag code references to Bucketeer's backend.
     ids:
-    - bucketeer-find-code-refs
-
-    name: bucketeer-find-code-refs
-
-    description: Job for finding and sending feature flag code references to Bucketeer
-
-    homepage: "https://bucketeer.io"
-
+      - bucketeer-find-code-refs
+    homepage: https://bucketeer.io
     repository:
-      owner: bucketeer
-      name: homebrew-tap
+      owner: bucketeer-io
+      name: code-refs
       token: "{{ .Env.GITHUB_TOKEN }}"
-
-    folder: Formula
-
+      branch: main
+    license: Apache 2.0
+    directory: brew-formula
     url_template: "https://github.com/bucketeer-io/code-refs/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-
     install: |
       bin.install "bucketeer-find-code-refs"
-
     commit_author:
-      name: BucketeerReleaseBot
+      name: Bucketeer Bot
       email: bucketeer@cyberagent.co.jp
+    commit_msg_template: "ci: brew formula update for {{ .ProjectName }} version {{ .Tag }}"
 
 release:
-  disable: true # this disables releasing *to GitHub*; it will still push to Docker
+  disable: false # this disables releasing *to GitHub*; it will still push to Docker
   # (we want Releaser to be responsible for doing all the GitHub release manipulations)
 
 dockers:
-  -
-    image_templates:
-    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs:latest"
-    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs:{{ .Version }}"
+  - image_templates:
+      - "ghcr.io/bucketeer-io/bucketeer-find-code-refs:latest"
+      - "ghcr.io/bucketeer-io/bucketeer-find-code-refs:{{ .Version }}"
 
     dockerfile: Dockerfile
-    
+
     # GitHub Container Registry authentication settings
     build_flag_templates:
-    - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-    - "--label=org.opencontainers.image.description=Job for finding and sending feature flag code references to Bucketeer"
-    - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
-    - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
-    - "--label=org.opencontainers.image.version={{ .Version }}"
-    - "--label=org.opencontainers.image.created={{ .Date }}"
-    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-    - "--label=org.opencontainers.image.licenses=Apache-2.0"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description=Job for finding and sending feature flag code references to Bucketeer"
+      - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
+      - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=Apache-2.0"
 
-  -
-    goos: linux
+  - goos: linux
 
     # GOARCH of the built binaries/packages that should be used.
     goarch: amd64
     ids:
-    - bucketeer-find-code-refs-github-action
+      - bucketeer-find-code-refs-github-action
 
     image_templates:
-    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-github-action:latest"
-    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-github-action:{{ .Version }}"
+      - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-github-action:latest"
+      - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-github-action:{{ .Version }}"
 
     dockerfile: Dockerfile.github
-    
+
     # GitHub Container Registry authentication settings
     build_flag_templates:
-    - "--label=org.opencontainers.image.title={{ .ProjectName }}-github-action"
-    - "--label=org.opencontainers.image.description=GitHub Action for finding and sending feature flag code references to Bucketeer"
-    - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
-    - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
-    - "--label=org.opencontainers.image.version={{ .Version }}"
-    - "--label=org.opencontainers.image.created={{ .Date }}"
-    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-    - "--label=org.opencontainers.image.licenses=Apache-2.0"
-    
-  -
-    goos: linux
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}-github-action"
+      - "--label=org.opencontainers.image.description=GitHub Action for finding and sending feature flag code references to Bucketeer"
+      - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
+      - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=Apache-2.0"
+
+  - goos: linux
 
     # GOARCH of the built binaries/packages that should be used.
     goarch: amd64
 
     image_templates:
-    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-bitbucket-pipeline:latest"
-    - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-bitbucket-pipeline:{{ .Version }}"
+      - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-bitbucket-pipeline:latest"
+      - "ghcr.io/bucketeer-io/bucketeer-find-code-refs-bitbucket-pipeline:{{ .Version }}"
 
     ids:
-    - bucketeer-find-code-refs-bitbucket-pipeline
+      - bucketeer-find-code-refs-bitbucket-pipeline
 
     dockerfile: Dockerfile.bitbucket
-    
+
     # GitHub Container Registry authentication settings
     build_flag_templates:
-    - "--label=org.opencontainers.image.title={{ .ProjectName }}-bitbucket-pipeline"
-    - "--label=org.opencontainers.image.description=Bitbucket Pipeline for finding and sending feature flag code references to Bucketeer"
-    - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
-    - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
-    - "--label=org.opencontainers.image.version={{ .Version }}"
-    - "--label=org.opencontainers.image.created={{ .Date }}"
-    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-    - "--label=org.opencontainers.image.licenses=Apache-2.0"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}-bitbucket-pipeline"
+      - "--label=org.opencontainers.image.description=Bitbucket Pipeline for finding and sending feature flag code references to Bucketeer"
+      - "--label=org.opencontainers.image.url=https://github.com/bucketeer-io/code-refs"
+      - "--label=org.opencontainers.image.source=https://github.com/bucketeer-io/code-refs"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=Apache-2.0"
