@@ -7,18 +7,28 @@ The section provides examples of various `bash` commands to execute `bucketeer-f
 ```bash
 bucketeer-find-code-refs \
   --apiKey=$YOUR_BUCKETEER_API_KEY \
-  --apiEndpoint=$YOUR_BUCKETEER_BASE_URI \
+  --apiEndpoint=$YOUR_BUCKETEER_API_ENDPOINT \
   --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo"
 ```
 
 ## Configuration with multiple API keys
 
+You can set multiple API keys using commas or by passing the `--apiKey` multiple times.
+
 ```bash
+bucketeer-find-code-refs \
+  --apiKey="$YOUR_BUCKETEER_API_KEY1,$YOUR_BUCKETEER_API_KEY2" \
+  --apiEndpoint=$YOUR_BUCKETEER_API_ENDPOINT \
+  --repoName=$YOUR_REPOSITORY_NAME \
+  --dir="/path/to/git/repo"
+
+# Or
+
 bucketeer-find-code-refs \
   --apiKey="$YOUR_BUCKETEER_API_KEY1" \
   --apiKey="$YOUR_BUCKETEER_API_KEY2" \
-  --apiEndpoint=$YOUR_BUCKETEER_BASE_URI \
+  --apiEndpoint=$YOUR_BUCKETEER_API_ENDPOINT \
   --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo"
 ```
@@ -26,9 +36,9 @@ bucketeer-find-code-refs \
 ## Using environment variables with multiple API keys
 
 ```bash
-export BUCKETEER_APIKEY="key1,key2,key3"
+export BUCKETEER_APIKEY="api_key1,api_key2,api_key3"
 bucketeer-find-code-refs \
-  --apiEndpoint=$YOUR_BUCKETEER_BASE_URI \
+  --apiEndpoint=$YOUR_BUCKETEER_API_ENDPOINT \
   --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo"
 ```
@@ -38,7 +48,7 @@ bucketeer-find-code-refs \
 ```bash
 bucketeer-find-code-refs \
   --apiKey="$YOUR_BUCKETEER_API_KEY" \
-  --apiEndpoint="$YOUR_BUCKETEER_BASE_URI" \
+  --apiEndpoint="$YOUR_BUCKETEER_API_ENDPOINT" \
   --repoName="$YOUR_REPOSITORY_NAME" \
   --dir="/path/to/git/repo" \
   --contextLines=3 # can be up to 5. If < 0, no source code will be sent to Bucketeer
@@ -51,7 +61,7 @@ A configuration with the the `repoType` set to GitHub, and the `repoUrl` set to 
 ```bash
 bucketeer-find-code-refs \
   --apiKey="$YOUR_BUCKETEER_API_KEY" \
-  --apiEndpoint="$YOUR_BUCKETEER_BASE_URI" \
+  --apiEndpoint="$YOUR_BUCKETEER_API_ENDPOINT" \
   --repoName="$YOUR_REPOSITORY_NAME" \
   --dir="/path/to/git/repo" \
   --contextLines=3 \
@@ -66,7 +76,7 @@ By default, `bucketeer-find-code-refs` will attempt to infer repository metadata
 ```bash
 bucketeer-find-code-refs \
   --apiKey=$YOUR_BUCKETEER_API_KEY \
-  --apiEndpoint=$YOUR_BUCKETEER_BASE_URI \
+  --apiEndpoint=$YOUR_BUCKETEER_API_ENDPOINT \
   --repoName=$YOUR_REPOSITORY_NAME \
   --dir="/path/to/git/repo" \
   --revision="REPO_REVISION_STRING" \

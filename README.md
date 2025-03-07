@@ -63,7 +63,7 @@ If you are scanning a git repository, `bucketeer-code-refs` requires git (tested
 
 Required configuration:
 - `API_KEY`: Your Bucketeer API key
-- `BASE_URI`: Your Bucketeer API base URI
+- `API_ENDPOINT`: Your Bucketeer API endpoint
 - `ENVIRONMENT_ID`: The Bucketeer environment ID
 - `REPO_NAME`: The name of your repository
 - `REPO_OWNER`: The owner of your repository
