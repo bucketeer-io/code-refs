@@ -2,6 +2,13 @@
 
 All notable changes to the ld-find-code-refs program will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [0.0.1](https://github.com/bucketeer-io/code-refs/compare/v0.0.1...v0.0.1) (2025-03-07)
+
+
+### Features
+
+* bucketeer integration ([#1](https://github.com/bucketeer-io/code-refs/issues/1)) ([3926f23](https://github.com/bucketeer-io/code-refs/commit/3926f23ea27ecc8c63ed95e7da7cc14e6a01a507))
+
 ## [2.13.0] - 2024-12-18
 ### Added:
 - `subdirectory` option to set path to `.launchdarkly/coderefs.yaml` config file if not located in the root, in order to support monorepo subdirectories.
