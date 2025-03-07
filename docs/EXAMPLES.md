@@ -14,7 +14,7 @@ bucketeer-find-code-refs \
 
 ## Configuration with multiple API keys
 
-You can set using commas, or passing the `--apiKey` multiple times.
+You can set multiple API keys using commas or by passing the `--apiKey` multiple times.
 
 ```bash
 bucketeer-find-code-refs \
