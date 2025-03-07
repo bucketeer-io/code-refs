@@ -11,7 +11,7 @@ class BucketeerFindCodeRefs < Formula
   on_macos do
     if Hardware::CPU.intel?
       url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.1/code-refs_0.0.1_darwin_amd64.tar.gz"
-      sha256 "017b1d581b91fce49e1a5b2539a895ac642f257cbe2ca06c2b02841be3955e57"
+      sha256 "40463dc0b9e685a9a68b3bb08e27ef974948ac8391337739d0dd96cd2aaafc4a"
 
       def install
         bin.install "bucketeer-find-code-refs"
@@ -19,7 +19,7 @@ class BucketeerFindCodeRefs < Formula
     end
     if Hardware::CPU.arm?
       url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.1/code-refs_0.0.1_darwin_arm64.tar.gz"
-      sha256 "4fd9b6342d0607f8ec8eb78f8112b96820a8a41424600ae43d6bb25a93b01ca1"
+      sha256 "1f7e3298fdca743bc759a30e4bde907e8c5eb01146ff25ce6d93e5dd7b1b940e"
 
       def install
         bin.install "bucketeer-find-code-refs"
@@ -31,7 +31,7 @@ class BucketeerFindCodeRefs < Formula
     if Hardware::CPU.intel?
       if Hardware::CPU.is_64_bit?
         url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.1/code-refs_0.0.1_linux_amd64.tar.gz"
-        sha256 "6774e0720a6a424a3cbe7500d733ce10a740aa8e4690947448cc580865d15a6a"
+        sha256 "acce7294df4e19364a1a004e8f7a065e1d03f2105e0ed6f2d2002030e4090228"
 
         def install
           bin.install "bucketeer-find-code-refs"
@@ -41,7 +41,7 @@ class BucketeerFindCodeRefs < Formula
     if Hardware::CPU.arm?
       if Hardware::CPU.is_64_bit?
         url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.1/code-refs_0.0.1_linux_arm64.tar.gz"
-        sha256 "0c94aa5d62b873843b92010ad55dcfa0739e08004b85e87f5485d231757039bd"
+        sha256 "e000eddf05e4c7bba1375f5994730ef0f5e9dec7be24d2732fbf2cd68bb47ab5"
 
         def install
           bin.install "bucketeer-find-code-refs"
