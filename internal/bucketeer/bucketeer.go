@@ -194,7 +194,7 @@ func (c *apiClient) GetFlagKeyList(ctx context.Context, opts options.Options) ([
 }
 
 func (c *apiClient) CreateCodeReference(ctx context.Context, opts options.Options, ref CodeReference) error {
-	url := c.apiEndpoint + "/v1/code_references"
+	url := c.apiEndpoint + "/v1/code_reference"
 	body, err := json.Marshal(ref)
 	if err != nil {
 		return err
@@ -222,7 +222,7 @@ func (c *apiClient) CreateCodeReference(ctx context.Context, opts options.Option
 }
 
 func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Options, id string, ref CodeReference) error {
-	url := c.apiEndpoint + "/v1/code_references/" + id
+	url := c.apiEndpoint + "/v1/code_reference/" + id
 	body, err := json.Marshal(ref)
 	if err != nil {
 		return err
@@ -250,7 +250,7 @@ func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Option
 }
 
 func (c *apiClient) DeleteCodeReference(ctx context.Context, opts options.Options, id string) error {
-	url := c.apiEndpoint + "/v1/code_references/" + id
+	url := c.apiEndpoint + "/v1/code_reference/" + id
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
