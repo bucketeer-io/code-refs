@@ -10,10 +10,6 @@ All notable changes to the ld-find-code-refs program will be documented in this 
 * gateway endpoint changed ([287665f](https://github.com/bucketeer-io/code-refs/commit/287665f7395055f10098ca8687ed8aff63b9e5d1))
 
 
-### Miscellaneous
-
-* gateway endpoint changed ([8a08790](https://github.com/bucketeer-io/code-refs/commit/8a0879048822775d4a6f78515222312dd0e05036))
-
 ## [0.0.1](https://github.com/bucketeer-io/code-refs/compare/v0.0.1...v0.0.1) (2025-03-07)
 
 
