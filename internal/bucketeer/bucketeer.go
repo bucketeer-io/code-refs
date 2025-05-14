@@ -222,7 +222,8 @@ func (c *apiClient) CreateCodeReference(ctx context.Context, opts options.Option
 }
 
 func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Options, id string, ref CodeReference) error {
-	url := c.apiEndpoint + "/v1/code_reference/" + id
+	ref.ID = id
+	url := c.apiEndpoint + "/v1/code_reference"
 	body, err := json.Marshal(ref)
 	if err != nil {
 		return err
@@ -250,7 +251,7 @@ func (c *apiClient) UpdateCodeReference(ctx context.Context, opts options.Option
 }
 
 func (c *apiClient) DeleteCodeReference(ctx context.Context, opts options.Options, id string) error {
-	url := c.apiEndpoint + "/v1/code_reference/" + id
+	url := c.apiEndpoint + "/v1/code_reference?id=" + id
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
