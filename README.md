@@ -13,7 +13,7 @@ This repository provides solutions for configuring [Bucketeer code references](h
     - [Linux](#linux)
     - [Windows](#windows)
     - [Docker](#docker)
-- [Configuration](#cli-configuration)
+- [Configuration](#configuration)
   - [Required arguments](docs/CONFIGURATION.md#required-arguments)
   - [All arguments](docs/CONFIGURATION.md#command-line)
   - [Using environment variables](docs/CONFIGURATION.md#environment-variables)
@@ -36,25 +36,54 @@ If you are scanning a git repository, `bucketeer-code-refs` requires git (tested
 #### macOS
 
 ```bash
-# TODO: Add installation instructions for macOS
+brew tap bucketeer-io/code-refs https://github.com/bucketeer-io/code-refs
+brew install bucketeer-find-code-refs
 ```
+
+You can now run `bucketeer-find-code-refs`.
 
 #### Linux
 
+We upload deb and rpm packages with our [GitHub releases](https://github.com/bucketeer-io/code-refs/releases/latest).
+
+##### Ubuntu / Debian
+
 ```bash
-# TODO: Add installation instructions for Linux
+wget -qO- https://api.github.com/repos/bucketeer-io/code-refs/releases/latest \
+  | grep "browser_download_url" \
+  | grep "amd64.deb" \
+  | cut -d'"' -f4 \
+  | wget -qi - -O bucketeer-find-code-refs.amd64.deb
+
+dpkg -i bucketeer-find-code-refs.amd64.deb
+```
+
+##### RPM-based (RHEL / CentOS / Fedora)
+
+```bash
+wget -qO- https://api.github.com/repos/bucketeer-io/code-refs/releases/latest \
+  | grep "browser_download_url" \
+  | grep "x86_64.rpm" \
+  | cut -d'"' -f4 \
+  | wget -qi - -O bucketeer-find-code-refs.x86_64.rpm
+
+rpm -i bucketeer-find-code-refs.x86_64.rpm
 ```
 
 #### Windows
 
-```bash
-# TODO: Add installation instructions for Windows
-```
+A Windows executable of `bucketeer-find-code-refs` is available on the [releases page](https://github.com/bucketeer-io/code-refs/releases/latest).
 
 #### Docker
 
+`bucketeer-find-code-refs` is available as a Docker image on the GitHub Container Registry. The image provides an entrypoint for `bucketeer-find-code-refs`, to which command line arguments may be passed. Your repository to be scanned should be mounted as a volume.
+
 ```bash
-# TODO: Add Docker instructions
+docker pull ghcr.io/bucketeer-io/bucketeer-find-code-refs:latest
+docker run \
+  -v /path/to/your/repo:/repo \
+  ghcr.io/bucketeer-io/bucketeer-find-code-refs:latest \
+  --dir="/repo"
 ```
 
 ### Configuration
