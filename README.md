@@ -44,31 +44,13 @@ You can now run `bucketeer-find-code-refs`.
 
 #### Linux
 
-We upload deb and rpm packages with our [GitHub releases](https://github.com/bucketeer-io/code-refs/releases/latest).
-
-##### Ubuntu / Debian
+Supports `x86_64`, `arm64`, and `i386`. The script auto-detects your architecture and installs via `dpkg`, `rpm`, or a binary depending on your system.
 
 ```bash
-wget -qO- https://api.github.com/repos/bucketeer-io/code-refs/releases/latest \
-  | grep "browser_download_url" \
-  | grep "amd64.deb" \
-  | cut -d'"' -f4 \
-  | wget -qi - -O bucketeer-find-code-refs.amd64.deb
-
-dpkg -i bucketeer-find-code-refs.amd64.deb
+curl -sfL https://raw.githubusercontent.com/bucketeer-io/code-refs/main/scripts/install.sh | bash
 ```
 
-##### RPM-based (RHEL / CentOS / Fedora)
-
-```bash
-wget -qO- https://api.github.com/repos/bucketeer-io/code-refs/releases/latest \
-  | grep "browser_download_url" \
-  | grep "x86_64.rpm" \
-  | cut -d'"' -f4 \
-  | wget -qi - -O bucketeer-find-code-refs.x86_64.rpm
-
-rpm -i bucketeer-find-code-refs.x86_64.rpm
-```
+You can now run `bucketeer-find-code-refs`.
 
 #### Windows
 
