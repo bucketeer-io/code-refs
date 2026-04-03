@@ -2,6 +2,13 @@
 
 All notable changes to the ld-find-code-refs program will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [0.0.4](https://github.com/bucketeer-io/code-refs/compare/v0.0.3...v0.0.4) (2026-04-03)
+
+
+### Miscellaneous
+
+* installation guideline ([#12](https://github.com/bucketeer-io/code-refs/issues/12)) ([6db6b99](https://github.com/bucketeer-io/code-refs/commit/6db6b9915c010020198e02248cd58fdbe3a4dec9))
+
 ## [0.0.3](https://github.com/bucketeer-io/code-refs/compare/v0.0.2...v0.0.3) (2025-06-12)
 
 
