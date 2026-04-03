@@ -76,7 +76,7 @@ brews:
       token: "{{ .Env.GITHUB_TOKEN }}"
       branch: main
     license: Apache 2.0
-    directory: brew-formula
+    directory: Formula
     url_template: "https://github.com/bucketeer-io/code-refs/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     install: |
       bin.install "bucketeer-find-code-refs"
