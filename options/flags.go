@@ -99,6 +99,13 @@ the project to this directory.`,
 		usage:        `If enabled, branches that are not found in the remote repository will be deleted from Bucketeer.`,
 	},
 	{
+		name:         "redactSecrets",
+		defaultValue: true,
+		usage: `If enabled, values that look like secrets (API keys, tokens,
+passwords, private keys) are replaced with "[REDACTED]" in the code lines
+sent to Bucketeer.`,
+	},
+	{
 		name:         "repoName",
 		short:        "r",
 		defaultValue: "",

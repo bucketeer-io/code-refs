@@ -61,10 +61,13 @@ type Options struct {
 	DryRun              bool     `mapstructure:"dryRun"`
 	IgnoreServiceErrors bool     `mapstructure:"ignoreServiceErrors"`
 	Prune               bool     `mapstructure:"prune"`
+	RedactSecrets       bool     `mapstructure:"redactSecrets"`
 
 	// The following options can only be configured via YAML configuration
-	Aliases    []Alias    `mapstructure:"aliases"`
-	Delimiters Delimiters `mapstructure:"delimiters"`
+	Aliases        []Alias    `mapstructure:"aliases"`
+	Delimiters     Delimiters `mapstructure:"delimiters"`
+	RedactPatterns []string   `mapstructure:"redactPatterns"`
+	RedactKeywords []string   `mapstructure:"redactKeywords"`
 }
 
 type Delimiters struct {
@@ -256,6 +259,12 @@ func (o Options) Validate() error {
 	for _, a := range o.Aliases {
 		if err := a.IsValid(); err != nil {
 			return err
+		}
+	}
+
+	for i, p := range o.RedactPatterns {
+		if _, err := regexp.Compile(p); err != nil {
+			return fmt.Errorf(`invalid value %q for "redactPatterns[%d]": %+v`, p, i, err)
 		}
 	}
 

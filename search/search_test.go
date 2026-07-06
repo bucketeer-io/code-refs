@@ -91,7 +91,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 0,
 			flagKey: testFlagKey,
 			lines:   []string{delimitedTestFlagKey},
-			want:    makeHunkPtr(1, delimitedTestFlagKey),
+			want:    makeHunkPtr(1),
 		},
 		{
 			name: "matches no context lines without delimiters",

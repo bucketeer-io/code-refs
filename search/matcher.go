@@ -11,6 +11,7 @@ import (
 type Matcher struct {
 	Element  ElementMatcher
 	ctxLines int
+	redactor *redactor
 }
 
 func NewEnvironmentMatcher(opts options.Options, dir string, flagKeys []string) Matcher {
@@ -23,8 +24,17 @@ func NewEnvironmentMatcher(opts options.Options, dir string, flagKeys []string) 
 
 	element := NewElementMatcher("", opts.Subdirectory, delimiters, flagKeys, aliasesByFlagKey)
 
+	var r *redactor
+	if opts.RedactSecrets {
+		r, err = newRedactor(opts.RedactPatterns, opts.RedactKeywords)
+		if err != nil {
+			log.Error.Fatalf("failed to configure secret redaction: %s", err)
+		}
+	}
+
 	return Matcher{
 		ctxLines: opts.ContextLines,
+		redactor: r,
 		Element:  element,
 	}
 }

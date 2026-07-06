@@ -19,6 +19,7 @@ This repository provides solutions for configuring [Bucketeer code references](h
   - [Using environment variables](docs/CONFIGURATION.md#environment-variables)
   - [Using a YAML file](docs/CONFIGURATION.md#YAML)
   - [Delimiters](docs/CONFIGURATION.md#delimiters)
+  - [Secret redaction](docs/CONFIGURATION.md#secret-redaction)
   - [Ignoring files and directories](docs/CONFIGURATION.md#ignoring-files-and-directories)
 
 ## Execution via CLI

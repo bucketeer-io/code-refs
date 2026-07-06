@@ -42,6 +42,7 @@ Flags:
   -i, --ignoreServiceErrors        If enabled, the scanner will terminate with exit code 0 when the Bucketeer API is unreachable or returns an unexpected response.
   -o, --outDir string              If provided, will output a csv file containing all code references for the project to this directory.
       --prune                      If enabled, branches that are not found in the remote repository will be deleted from Bucketeer. (default true)
+      --redactSecrets              If enabled, values that look like secrets (API keys, tokens, passwords, private keys) are replaced with "[REDACTED]" in the code lines sent to Bucketeer. (default true)
   -r, --repoName string            Repository name. Will be displayed in Bucketeer. Case insensitive. Repository names must only contain letters, numbers, '.', '_' or '-'."
   -T, --repoType string            The repo service provider. Used to correctly categorize repositories in the Bucketeer UI. Acceptable values: bitbucket|custom|github|gitlab. (default "custom")
   -u, --repoUrl string             The URL for the repository. If provided and "repoType" is not custom, Bucketeer will attempt to automatically generate source code links for the given "repoType".
@@ -78,7 +79,7 @@ repoType:
 
 ### Advanced YAML configuration
 
-In addition to all command line options, the `coderefs.yaml` file allows you to configure Code Reference Aliases, Projects, and custom flag key delimiters.
+In addition to all command line options, the `coderefs.yaml` file allows you to configure Code Reference Aliases, Projects, custom flag key delimiters, and custom secret redaction rules.
 
 #### Aliases
 
@@ -99,6 +100,22 @@ delimiters:
     - '<'
     - '>'
 ```
+
+#### Secret redaction
+
+When `redactSecrets` is enabled (the default), values that look like secrets are replaced with `[REDACTED]` in the code lines sent to Bucketeer. Out of the box this covers well-known token formats (AWS, GitHub, GitLab, Slack, Stripe, Google, JWTs, `Authorization` headers, private keys) and quoted assignments to variables whose name contains a common secret keyword (`apikey`, `secret`, `token`, `password`, `credential`, `auth`).
+
+If your codebase uses its own naming conventions or token formats, you can extend the built-in rules:
+
+```yaml
+redactPatterns:  # an array of regular expressions; each whole match is replaced with [REDACTED]
+  - '\bmyco_[A-Za-z0-9]{20}\b'
+redactKeywords:  # extra variable-name keywords (matched case-insensitively as substrings) for quoted assignments
+  - 'connStr'
+  - 'sessionId'
+```
+
+With the example above, `dbConnStr = "postgres://..."` is sent as `dbConnStr = "[REDACTED]"`, and any string matching `myco_...` is redacted wherever it appears.
 
 ## Ignoring files and directories
 
