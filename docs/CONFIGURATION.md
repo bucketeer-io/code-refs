@@ -112,10 +112,13 @@ redactPatterns:  # an array of regular expressions; each whole match is replaced
   - '\bmyco_[A-Za-z0-9]{20}\b'
 redactKeywords:  # extra variable-name keywords (matched case-insensitively as substrings) for quoted assignments
   - 'connStr'
+  - 'conn_str'
   - 'sessionId'
 ```
 
 With the example above, `dbConnStr = "postgres://..."` is sent as `dbConnStr = "[REDACTED]"`, and any string matching `myco_...` is redacted wherever it appears.
+
+Keywords are matched as literal substrings, so `connStr` matches `dbConnStr` but not the snake_case `db_conn_str`. For multi-word keywords, add both the camelCase and snake_case forms, as shown above.
 
 ## Ignoring files and directories
 
