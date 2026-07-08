@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/betterleaks/betterleaks/detect"
+	"github.com/zricethezav/gitleaks/v8/detect"
 )
 
 const redactedPlaceholder = "[REDACTED]"
@@ -18,7 +18,7 @@ type secretPattern struct {
 	replacement string
 }
 
-// Vendor-specific credential formats are detected by the betterleaks ruleset.
+// Vendor-specific credential formats are detected by the gitleaks ruleset.
 // The patterns below cover generic material that a leak scanner deliberately
 // leaves to context-aware tools: authorization header values, passwords in
 // URLs, and quoted assignments to secret-looking variable names.
@@ -43,17 +43,18 @@ var (
 var defaultKeywords = []string{"api[_-]?key", "secret", "token", "passwd", "password", "credential", "auth"}
 
 type redactor struct {
-	detector *detect.Detector
-	patterns []secretPattern
+	detector                  *detect.Detector
+	patterns                  []secretPattern
+	unquotedAssignmentPattern *regexp.Regexp
 }
 
-// newRedactor builds a redactor from the betterleaks default ruleset,
+// newRedactor builds a redactor from the gitleaks default ruleset,
 // user-provided regexes (whole match is replaced), and user-provided keywords
 // merged with the default keywords for generic assignment matching.
 func newRedactor(customPatterns, customKeywords []string) (*redactor, error) {
 	detector, err := detect.NewDetectorDefaultConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load betterleaks ruleset: %w", err)
+		return nil, fmt.Errorf("failed to load gitleaks ruleset: %w", err)
 	}
 
 	patterns := make([]secretPattern, 0, len(customPatterns)+5) //nolint:mnd
@@ -84,7 +85,13 @@ func newRedactor(customPatterns, customKeywords []string) (*redactor, error) {
 		})
 	}
 
-	return &redactor{detector: detector, patterns: patterns}, nil
+	// Catches unquoted assignments (e.g. .env/.ini/credentials-file style)
+	// that gitleaks' own rules and the quoted patterns above miss.
+	unquotedAssignmentPattern := regexp.MustCompile(
+		`(?i)([\w-]*(` + alternation + `)[\w-]*\s*[:=]+\s*)([A-Za-z0-9+/_=-]{12,})`, //nolint:mnd
+	)
+
+	return &redactor{detector: detector, patterns: patterns, unquotedAssignmentPattern: unquotedAssignmentPattern}, nil
 }
 
 // redactHunk scrubs values that look like credentials (API keys, tokens,
@@ -95,17 +102,14 @@ func (r *redactor) redactHunk(lines []string) []string {
 	joined := strings.Join(lines, "\n")
 	for _, finding := range r.detector.DetectString(joined) {
 		joined = redactSecret(joined, finding.Secret)
-		// composite rules (e.g. AWS key ID + secret access key) report the
-		// components separately; redact those too
-		for _, set := range finding.RequiredSets {
-			for _, component := range set.Components {
-				joined = redactSecret(joined, component.Secret)
-			}
-		}
 	}
 	out := strings.Split(joined, "\n")
 
 	r.redactPEMBlocks(out)
+
+	for i, line := range out {
+		out[i] = redactUnquotedAssignmentLine(r.unquotedAssignmentPattern, line)
+	}
 
 	for i := range out {
 		for _, p := range r.patterns {
@@ -130,9 +134,63 @@ func redactSecret(text, secret string) string {
 	return strings.ReplaceAll(text, secret, strings.Join(parts, "\n"))
 }
 
+// looksLikeSecretValue reports whether v is shaped like a credential rather
+// than an ordinary identifier, boolean, or English word: it must contain both
+// a letter and a digit.
+func looksLikeSecretValue(v string) bool {
+	var hasLetter, hasDigit bool
+	for _, c := range v {
+		switch {
+		case c >= '0' && c <= '9':
+			hasDigit = true
+		case (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'):
+			hasLetter = true
+		}
+		if hasLetter && hasDigit {
+			return true
+		}
+	}
+	return false
+}
+
+// redactUnquotedAssignmentLine redacts unquoted secret-shaped values (e.g.
+// aws_secret_access_key = wJalr.../K7...) that gitleaks' generic-api-key rule
+// and our own quoted-assignment patterns miss because they contain characters
+// like `/` outside its charset. RE2 has no lookahead, so a value immediately
+// followed by `.` or `(` -- e.g. `apiKey := opts.APIKey` or
+// `tokenCount := len(tokens)` -- is excluded by inspecting match indices
+// directly rather than via the regex itself.
+func redactUnquotedAssignmentLine(re *regexp.Regexp, line string) string {
+	matches := re.FindAllStringSubmatchIndex(line, -1)
+	if matches == nil {
+		return line
+	}
+	var b strings.Builder
+	last := 0
+	for _, m := range matches {
+		valStart, valEnd := m[6], m[7]
+		redact := looksLikeSecretValue(line[valStart:valEnd])
+		if redact && valEnd < len(line) {
+			if next := line[valEnd]; next == '.' || next == '(' {
+				redact = false
+			}
+		}
+		b.WriteString(line[last:m[0]])
+		if redact {
+			b.WriteString(line[m[0]:m[3]])
+			b.WriteString(redactedPlaceholder)
+		} else {
+			b.WriteString(line[m[0]:m[1]])
+		}
+		last = m[1]
+	}
+	b.WriteString(line[last:])
+	return b.String()
+}
+
 // redactPEMBlocks redacts everything from a private key header to the
 // matching footer, or to the end of the hunk when the block is cut off by the
-// hunk boundary. This backstops the betterleaks private-key rule, which needs
+// hunk boundary. This backstops the gitleaks private-key rule, which needs
 // the footer to be present to match.
 func (r *redactor) redactPEMBlocks(lines []string) {
 	inBlock := false

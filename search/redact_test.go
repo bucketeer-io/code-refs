@@ -107,6 +107,42 @@ func Test_redactSecrets(t *testing.T) {
 			want: `endpoint = "https://api.example.com:8443/v1/health"`,
 		},
 		{
+			// assembled at runtime so secret scanners don't flag the fake secret
+			name: "unquoted assignment with slash-containing value is redacted",
+			line: `aws_secret_access_key = ` + "q7PkzOxMjTn2" + "FvBw5RcY8dHl3sGe1uAiK9pXm4tE",
+			want: `aws_secret_access_key = [REDACTED]`,
+		},
+		{
+			name: "unquoted assignment with no spaces around equals is redacted",
+			line: `DB_PASSWORD=S3cr3tPw9xKq2m`,
+			want: `DB_PASSWORD=[REDACTED]`,
+		},
+		{
+			name: "unquoted assignment to another identifier is not redacted",
+			line: `apiKey := opts.APIKey`,
+			want: `apiKey := opts.APIKey`,
+		},
+		{
+			name: "unquoted assignment to a function call is not redacted",
+			line: `tokenCount := len(tokens)`,
+			want: `tokenCount := len(tokens)`,
+		},
+		{
+			name: "unquoted all-alpha value is not redacted despite length",
+			line: `secretMode := productionenvironment`,
+			want: `secretMode := productionenvironment`,
+		},
+		{
+			name: "unquoted value followed by a dotted selector is not redacted",
+			line: `token := someFactory123456.Build()`,
+			want: `token := someFactory123456.Build()`,
+		},
+		{
+			name: "unquoted short value under the length floor is not redacted",
+			line: `token = abc`,
+			want: `token = abc`,
+		},
+		{
 			name: "redaction is idempotent",
 			line: `api_key = "[REDACTED]"`,
 			want: `api_key = "[REDACTED]"`,
@@ -125,9 +161,11 @@ func Test_redactSecrets_awsKeyPair(t *testing.T) {
 	r, err := newRedactor(nil, nil)
 	require.NoError(t, err)
 
-	// the aws-access-token rule is composite: the key ID is only reported
-	// when the paired secret access key appears within 5 lines. The fake
-	// credentials are assembled at runtime so secret scanners don't flag them.
+	// gitleaks' aws-access-token rule matches the key ID standalone; the
+	// paired secret access key is caught by the unquoted-assignment pattern
+	// since it isn't quoted and contains characters gitleaks' own generic
+	// rule excludes. The fake credentials are assembled at runtime so secret
+	// scanners don't flag them.
 	awsKeyID := "AKIA" + "W3JT6BPZ2XKMQ7NC"
 	awsSecretKey := "q7PkzOxMjTn2" + "FvBw5RcY8dHl3sGe1uAiK9pXm4tE"
 	got := r.redactHunk([]string{
