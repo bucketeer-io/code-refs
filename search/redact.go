@@ -20,11 +20,17 @@ type secretPattern struct {
 
 // Vendor-specific credential formats are detected by the betterleaks ruleset.
 // The patterns below cover generic material that a leak scanner deliberately
-// leaves to context-aware tools: authorization header values and quoted
-// assignments to secret-looking variable names.
+// leaves to context-aware tools: authorization header values, passwords in
+// URLs, and quoted assignments to secret-looking variable names.
 var authHeaderPattern = secretPattern{
 	regex:       regexp.MustCompile(`(?i)\b(bearer|basic)\s+[A-Za-z0-9\-._~+/]{16,}=*`),
 	replacement: "$1 " + redactedPlaceholder,
+}
+
+// Passwords in URL userinfo, e.g. postgres://admin:hunter2@db:5432/prod
+var urlCredentialsPattern = secretPattern{
+	regex:       regexp.MustCompile(`(://[^:/?#@\s]+:)[^@/?#\s]+@`),
+	replacement: "$1" + redactedPlaceholder + "@",
 }
 
 var (
@@ -50,8 +56,8 @@ func newRedactor(customPatterns, customKeywords []string) (*redactor, error) {
 		return nil, fmt.Errorf("failed to load betterleaks ruleset: %w", err)
 	}
 
-	patterns := make([]secretPattern, 0, len(customPatterns)+4) //nolint:mnd
-	patterns = append(patterns, authHeaderPattern)
+	patterns := make([]secretPattern, 0, len(customPatterns)+5) //nolint:mnd
+	patterns = append(patterns, authHeaderPattern, urlCredentialsPattern)
 
 	for _, p := range customPatterns {
 		regex, err := regexp.Compile(p)

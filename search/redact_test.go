@@ -97,6 +97,16 @@ func Test_redactSecrets(t *testing.T) {
 			want: `enableTokenRefresh := true`,
 		},
 		{
+			name: "password in connection url",
+			line: `db = "postgres://admin:S3cr3tPw9xKq2m@db.internal:5432/prod"`,
+			want: `db = "postgres://admin:[REDACTED]@db.internal:5432/prod"`,
+		},
+		{
+			name: "url without credentials is unchanged",
+			line: `endpoint = "https://api.example.com:8443/v1/health"`,
+			want: `endpoint = "https://api.example.com:8443/v1/health"`,
+		},
+		{
 			name: "redaction is idempotent",
 			line: `api_key = "[REDACTED]"`,
 			want: `api_key = "[REDACTED]"`,
