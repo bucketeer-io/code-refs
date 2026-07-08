@@ -203,6 +203,16 @@ func Test_redactSecrets_multilinePEM(t *testing.T) {
 		})
 		require.Equal(t, []string{"[REDACTED]", "[REDACTED]", "[REDACTED]"}, got)
 	})
+
+	t.Run("block cut off at the top of the hunk is redacted from the start", func(t *testing.T) {
+		got := r.redactHunk([]string{
+			`MIIEowIBAAKCAQEA7bq0qzO5s7fVXygbYtNZ`,
+			`dGVzdGtleWZha2VkYXRhMTIzNDU2Nzg5MGFi`,
+			`-----END RSA PRIVATE KEY-----` + "`",
+			`return key`,
+		})
+		require.Equal(t, []string{"[REDACTED]", "[REDACTED]", "[REDACTED]", "return key"}, got)
+	})
 }
 
 func Test_newRedactor_customPatternsAndKeywords(t *testing.T) {

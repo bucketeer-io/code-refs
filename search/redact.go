@@ -207,6 +207,14 @@ func (r *redactor) redactPEMBlocks(lines []string) {
 			if !pemFooterRegex.MatchString(line[loc[1]:]) {
 				inBlock = true
 			}
+			continue
+		}
+		// a footer without a preceding header means the block started before
+		// the hunk boundary; redact from the top of the hunk to the footer
+		if pemFooterRegex.MatchString(line) {
+			for j := 0; j <= i; j++ {
+				lines[j] = redactedPlaceholder
+			}
 		}
 	}
 }
