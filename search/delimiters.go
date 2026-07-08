@@ -8,9 +8,9 @@ import (
 // Get a list of delimiters to use for flag key matching
 // If defaults are disabled, only additional configured delimiters will be used
 func GetDelimiters(opts options.Options) []string {
-	delims := []string{`"`, `'`, "`"}
-	if opts.Delimiters.DisableDefaults {
-		delims = []string{}
+	delims := make([]string, 0, 3+len(opts.Delimiters.Additional)) //nolint:mnd
+	if !opts.Delimiters.DisableDefaults {
+		delims = append(delims, `"`, `'`, "`")
 	}
 
 	delims = append(delims, opts.Delimiters.Additional...)

@@ -1,64 +1,82 @@
-project_name: ld-find-code-refs
-
+version: "2"
 run:
-  deadline: 120s
   tests: false
-
 linters:
-  enable-all: true
+  default: all
   disable:
-      - golint
-      - stylecheck
-      - gochecknoglobals
-      - lll
-      - errcheck
-      - interfacer
-      - tagliatelle
-      - varnamelen
-      - nonamedreturns
-      - nlreturn # re-enable this after fixing all cases
-      - gomnd # re-enable this after fixing all cases
-      - nosnakecase
-      - ifshort # re-enable
-      - nilerr #re-enable
-      - goerr113
-      - exhaustivestruct
-      - exhaustruct
-      - exhaustive
-      - godot
-      - wsl #fix
-      - gocognit
-      - revive
-      - errname
-      - cyclop
-      - gofumpt # fix
-      - gci
-      - nestif # fix
-      - gosec
-      - gocritic
-      - depguard
-      - tagalign
-      - nilnil
-  fast: false
-
-linter-settings:
-  goimports:
-    local-prefixes: github.com/launchdarkly,gopkg.in/launchdarkly
-
+    - cyclop
+    - funcorder
+    - godoclint
+    - gomodguard
+    - modernize
+    - noinlineerr
+    - wsl_v5
+    - depguard
+    - err113
+    - errcheck
+    - errname
+    - exhaustive
+    - exhaustruct
+    - gochecknoglobals
+    - gocognit
+    - gocritic
+    - godot
+    - gosec
+    - lll
+    - mnd
+    - nestif
+    - nilerr
+    - nilnil
+    - nlreturn
+    - nonamedreturns
+    - revive
+    - tagalign
+    - tagliatelle
+    - varnamelen
+    - wsl
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - -ST*
+        - -QF*
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - staticcheck
+        text: SA5011
+      - path: (.+)\.go$
+        text: error returned from external package is unwrapped
+      - path: (.+)\.go$
+        text: error returned from interface method should be wrapped
+      - path: (.+)\.go$
+        text: comparing with == will fail on wrapped errors. Use errors.Is to check for a specific error
+      - path: (.+)\.go$
+        text: comparing with != will fail on wrapped errors. Use errors.Is to check for a specific error
+      - path: (.+)\.go$
+        text: non-wrapping format verb for fmt.Errorf. Use `%w` to format errors
+      - path: (.+)\.go$
+        text: append to slice `projectKeys` with non-zero initialized length
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude:
-    - "error returned from external package is unwrapped"
-    - "error returned from interface method should be wrapped"
-    - "comparing with == will fail on wrapped errors. Use errors.Is to check for a specific error" # should fix
-    - "comparing with != will fail on wrapped errors. Use errors.Is to check for a specific error" # should fix
-    - "non-wrapping format verb for fmt.Errorf. Use `%w` to format errors" # should fix
-    - "append to slice `projectKeys` with non-zero initialized length"
-  exclude-rules:
-    # Exclude some `staticcheck` messages.
-    - linters:
-        - staticcheck
-      text: "SA5011" # fix
-
-  exclude-use-default: false
+  max-issues-per-linter: 1000
   max-same-issues: 1000
-  max-per-linter: 1000
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/launchdarkly
+        - gopkg.in/launchdarkly
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
