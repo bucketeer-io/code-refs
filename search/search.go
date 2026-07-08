@@ -67,10 +67,10 @@ func (f file) hunkForLine(flagKey string, lineNum int, matcher Matcher) *buckete
 		copy(hunkLines, f.lines[startingLineNum:endingLineNum])
 	}
 
+	if matcher.redactor != nil {
+		hunkLines = matcher.redactor.redactHunk(hunkLines)
+	}
 	for i, line := range hunkLines {
-		if matcher.redactor != nil {
-			line = matcher.redactor.redact(line)
-		}
 		hunkLines[i] = truncateLine(line, maxLineCharCount)
 	}
 

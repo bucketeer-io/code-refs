@@ -18,13 +18,16 @@ func Test_redactSecrets(t *testing.T) {
 			want: `if client.BoolVariation("someFlag", user, false) {`,
 		},
 		{
-			name: "aws access key id",
-			line: `awsKey := "AKIAIOSFODNN7EXAMPLE"`,
+			// caught by the generic keyword rule ("key" in the variable name);
+			// a bare access key ID is only caught by the AWS rule when the
+			// secret access key is nearby, see Test_redactSecrets_awsKeyPair
+			name: "aws access key id assigned to key-named variable",
+			line: `awsKey := "AKIAZ9X24KQ7NW3JT6BP"`,
 			want: `awsKey := "[REDACTED]"`,
 		},
 		{
 			name: "github personal access token",
-			line: `client := github.NewClient("ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789")`,
+			line: `client := github.NewClient("ghp_Wq7xK2mV9tRz3bJ8pNn4Y6dL1gF5hC0Tka9s")`,
 			want: `client := github.NewClient("[REDACTED]")`,
 		},
 		{
@@ -40,7 +43,7 @@ func Test_redactSecrets(t *testing.T) {
 		{
 			// assembled at runtime so secret scanners don't flag the fake token
 			name: "slack token",
-			line: `slack.New("xox` + `b-123456789012-abcdefghijklmnop")`,
+			line: `slack.New("xox` + `b-593716823045-4fRk2LpQv7WmZx9TbYd3")`,
 			want: `slack.New("[REDACTED]")`,
 		},
 		{
@@ -103,9 +106,55 @@ func Test_redactSecrets(t *testing.T) {
 	require.NoError(t, err)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, r.redact(tt.line))
+			require.Equal(t, []string{tt.want}, r.redactHunk([]string{tt.line}))
 		})
 	}
+}
+
+func Test_redactSecrets_awsKeyPair(t *testing.T) {
+	r, err := newRedactor(nil, nil)
+	require.NoError(t, err)
+
+	// the aws-access-token rule is composite: the key ID is only reported
+	// when the paired secret access key appears within 5 lines. The fake
+	// credentials are assembled at runtime so secret scanners don't flag them.
+	awsKeyID := "AKIA" + "W3JT6BPZ2XKMQ7NC"
+	awsSecretKey := "q7PkzOxMjTn2" + "FvBw5RcY8dHl3sGe1uAiK9pXm4tE"
+	got := r.redactHunk([]string{
+		`[default]`,
+		"aws_access_key_id = " + awsKeyID,
+		"aws_secret_access_key = " + awsSecretKey,
+	})
+	require.Equal(t, "[default]", got[0])
+	require.NotContains(t, got[1], awsKeyID)
+	require.NotContains(t, got[2], awsSecretKey)
+}
+
+func Test_redactSecrets_multilinePEM(t *testing.T) {
+	r, err := newRedactor(nil, nil)
+	require.NoError(t, err)
+
+	t.Run("complete block is fully redacted", func(t *testing.T) {
+		got := r.redactHunk([]string{
+			`key := ` + "`" + `-----BEGIN RSA PRIVATE KEY-----`,
+			`MIIEowIBAAKCAQEA7bq0`,
+			`-----END RSA PRIVATE KEY-----` + "`",
+			`return key`,
+		})
+		require.Equal(t, "key := `[REDACTED]", got[0])
+		require.Equal(t, "[REDACTED]", got[1])
+		require.Equal(t, "[REDACTED]", got[2])
+		require.Equal(t, "return key", got[3])
+	})
+
+	t.Run("block cut off by the hunk boundary is redacted to the end", func(t *testing.T) {
+		got := r.redactHunk([]string{
+			`-----BEGIN OPENSSH PRIVATE KEY-----`,
+			`b3BlbnNzaC1rZXktdjEAAAAABG5vbmUA`,
+			`AAAEC5BJHRnfmVLMdSe1BleTLLmRD3wD`,
+		})
+		require.Equal(t, []string{"[REDACTED]", "[REDACTED]", "[REDACTED]"}, got)
+	})
 }
 
 func Test_newRedactor_customPatternsAndKeywords(t *testing.T) {
@@ -148,7 +197,7 @@ func Test_newRedactor_customPatternsAndKeywords(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, r.redact(tt.line))
+			require.Equal(t, []string{tt.want}, r.redactHunk([]string{tt.line}))
 		})
 	}
 }

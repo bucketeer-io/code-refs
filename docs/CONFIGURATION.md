@@ -103,7 +103,7 @@ delimiters:
 
 #### Secret redaction
 
-When `redactSecrets` is enabled (the default), values that look like secrets are replaced with `[REDACTED]` in the code lines sent to Bucketeer. Out of the box this covers well-known token formats (AWS, GitHub, GitLab, Slack, Stripe, Google, JWTs, `Authorization` headers, private keys) and quoted assignments to variables whose name contains a common secret keyword (`apikey`, `secret`, `token`, `password`, `credential`, `auth`).
+When `redactSecrets` is enabled (the default), values that look like secrets are replaced with `[REDACTED]` in the code lines sent to Bucketeer. Detection is powered by the [betterleaks](https://github.com/betterleaks/betterleaks) ruleset, which covers hundreds of well-known credential formats (cloud providers, VCS tokens, payment APIs, JWTs, private keys, and more). On top of that, `Authorization` header values and quoted assignments to variables whose name contains a common secret keyword (`apikey`, `secret`, `token`, `password`, `credential`, `auth`) are also redacted.
 
 If your codebase uses its own naming conventions or token formats, you can extend the built-in rules:
 
