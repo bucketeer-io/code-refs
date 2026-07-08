@@ -103,14 +103,14 @@ delimiters:
 
 #### Secret redaction
 
-When `redactSecrets` is enabled (the default), values that look like secrets are replaced with `[REDACTED]` in the code lines sent to Bucketeer. Detection is powered by the [gitleaks](https://github.com/gitleaks/gitleaks) ruleset (imported as `github.com/zricethezav/gitleaks/v8`), which covers hundreds of well-known credential formats (cloud providers, VCS tokens, payment APIs, JWTs, private keys, and more). On top of that, `Authorization` header values, passwords embedded in URLs (e.g. `postgres://user:pass@host`), and quoted or unquoted assignments to variables whose name contains a common secret keyword (`apikey`, `secret`, `token`, `password`, `credential`, `auth`) are also redacted — unquoted values must be at least 12 characters and contain both letters and digits, to avoid flagging ordinary code like `enableTokenRefresh := true` or `apiKey := opts.APIKey`.
+When `redactSecrets` is enabled (the default), values that look like secrets are replaced with `[REDACTED]` in the code lines sent to Bucketeer. Detection is powered by the [gitleaks](https://github.com/gitleaks/gitleaks) ruleset (imported as `github.com/zricethezav/gitleaks/v8`), which covers hundreds of well-known credential formats (cloud providers, VCS tokens, payment APIs, JWTs, private keys, and more). On top of that, `Authorization` header values, passwords embedded in URLs (e.g. `postgres://user:pass@host`), and quoted or unquoted assignments to variables whose name contains a common secret keyword (`apikey`, `secret`, `token`, `passwd`, `password`, `credential`, `auth`) are also redacted — unquoted values must be at least 12 characters and contain both letters and digits, to avoid flagging ordinary code like `enableTokenRefresh := true` or `apiKey := opts.APIKey`.
 
 If your codebase uses its own naming conventions or token formats, you can extend the built-in rules:
 
 ```yaml
 redactPatterns:  # an array of regular expressions; each whole match is replaced with [REDACTED]
   - '\bmyco_[A-Za-z0-9]{20}\b'
-redactKeywords:  # extra variable-name keywords (matched case-insensitively as substrings) for quoted assignments
+redactKeywords:  # extra variable-name keywords (matched case-insensitively as substrings) for quoted or unquoted assignments
   - 'connStr'
   - 'conn_str'
   - 'sessionId'
