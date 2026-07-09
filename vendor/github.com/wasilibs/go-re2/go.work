@@ -1,8 +1,0 @@
-go 1.22.0
-
-use (
-	.
-	./build
-	./internal/e2e
-	./wafbench
-)
