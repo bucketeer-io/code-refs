@@ -99,6 +99,11 @@ func newRedactor(customPatterns, customKeywords []string) (*redactor, error) {
 // Detection runs on the whole hunk so multi-line secrets such as PEM blocks
 // are caught; the returned slice always has the same length as the input.
 func (r *redactor) redactHunk(lines []string) []string {
+	// guard the length invariant: splitting the joined empty string below
+	// would yield [""] (length 1) for an empty input
+	if len(lines) == 0 {
+		return lines
+	}
 	joined := strings.Join(lines, "\n")
 	for _, finding := range r.detector.DetectString(joined) {
 		joined = redactSecret(joined, finding.Secret)

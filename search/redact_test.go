@@ -157,6 +157,16 @@ func Test_redactSecrets(t *testing.T) {
 	}
 }
 
+func Test_redactHunk_emptyInput(t *testing.T) {
+	r, err := newRedactor(nil, nil)
+	require.NoError(t, err)
+
+	// the length invariant must hold for empty hunks too (contextLines < 0
+	// leaves hunkLines nil); a nil input must not come back as [""]
+	require.Empty(t, r.redactHunk(nil))
+	require.Empty(t, r.redactHunk([]string{}))
+}
+
 func Test_redactSecrets_awsKeyPair(t *testing.T) {
 	r, err := newRedactor(nil, nil)
 	require.NoError(t, err)
