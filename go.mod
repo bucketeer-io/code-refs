@@ -18,7 +18,6 @@ require (
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/zricethezav/gitleaks/v8 v8.30.1
-	golang.org/x/tools/godoc v0.1.0-deprecated
 )
 
 require (
