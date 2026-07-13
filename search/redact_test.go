@@ -289,6 +289,13 @@ func Test_newRedactor_invalidPattern(t *testing.T) {
 	_, err := newRedactor([]string{`(unclosed`}, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invalid redaction pattern")
+
+	// patterns matching the empty string would expand every line
+	for _, p := range []string{``, `a*`} {
+		_, err = newRedactor([]string{p}, nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "must not match the empty string")
+	}
 }
 
 func Test_hunkForLine_redactsSecrets(t *testing.T) {

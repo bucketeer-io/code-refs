@@ -65,6 +65,11 @@ func newRedactor(customPatterns, customKeywords []string) (*redactor, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid redaction pattern %q: %w", p, err)
 		}
+		// a pattern matching the empty string (e.g. "" or "a*") would insert
+		// the placeholder between every character of every scanned line
+		if regex.MatchString("") {
+			return nil, fmt.Errorf("invalid redaction pattern %q: pattern must not match the empty string", p)
+		}
 		patterns = append(patterns, secretPattern{regex, redactedPlaceholder})
 	}
 

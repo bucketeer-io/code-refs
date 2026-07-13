@@ -263,8 +263,14 @@ func (o Options) Validate() error {
 	}
 
 	for i, p := range o.RedactPatterns {
-		if _, err := regexp.Compile(p); err != nil {
+		regex, err := regexp.Compile(p)
+		if err != nil {
 			return fmt.Errorf(`invalid value %q for "redactPatterns[%d]": %+v`, p, i, err)
+		}
+		// a pattern matching the empty string (e.g. "" or "a*") would insert
+		// [REDACTED] between every character of every scanned line
+		if regex.MatchString("") {
+			return fmt.Errorf(`invalid value %q for "redactPatterns[%d]": pattern must not match the empty string`, p, i)
 		}
 	}
 
