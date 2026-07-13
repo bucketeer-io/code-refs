@@ -143,6 +143,21 @@ func Test_redactSecrets(t *testing.T) {
 			want: `token = abc`,
 		},
 		{
+			name: "unquoted comparison is not redacted",
+			line: `if token == expectedToken123 {`,
+			want: `if token == expectedToken123 {`,
+		},
+		{
+			name: "quoted comparison is not redacted",
+			line: `if authType == "OAuth2.0-flow" {`,
+			want: `if authType == "OAuth2.0-flow" {`,
+		},
+		{
+			name: "strict-equality comparison is not redacted",
+			line: `password === candidatePassword42`,
+			want: `password === candidatePassword42`,
+		},
+		{
 			name: "redaction is idempotent",
 			line: `api_key = "[REDACTED]"`,
 			want: `api_key = "[REDACTED]"`,

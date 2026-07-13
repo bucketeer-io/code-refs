@@ -77,18 +77,22 @@ func newRedactor(customPatterns, customKeywords []string) (*redactor, error) {
 		keywords = append(keywords, regexp.QuoteMeta(k))
 	}
 	alternation := strings.Join(keywords, "|")
+	// Assignment separators: `:=`, `=`, or `:`. Spelled out as an alternation
+	// (rather than [:=]+) so comparison operators like `==` don't match.
+	const assignOp = `(?::=|[:=])`
 	// One pattern per quote character since RE2 does not support backreferences.
 	for _, q := range []string{`"`, `'`, "`"} {
 		patterns = append(patterns, secretPattern{
-			regex:       regexp.MustCompile(`(?i)([\w-]*(` + alternation + `)[\w-]*\s*[:=]+\s*` + q + `)[^` + q + `]{6,}` + q),
+			regex:       regexp.MustCompile(`(?i)([\w-]*(` + alternation + `)[\w-]*\s*` + assignOp + `\s*` + q + `)[^` + q + `]{6,}` + q),
 			replacement: "$1" + redactedPlaceholder + q,
 		})
 	}
 
 	// Catches unquoted assignments (e.g. .env/.ini/credentials-file style)
-	// that gitleaks' own rules and the quoted patterns above miss.
+	// that gitleaks' own rules and the quoted patterns above miss. The value
+	// may not start with `=` so the tail of a `==` comparison never matches.
 	unquotedAssignmentPattern := regexp.MustCompile(
-		`(?i)([\w-]*(` + alternation + `)[\w-]*\s*[:=]+\s*)([A-Za-z0-9+/_=-]{12,})`, //nolint:mnd
+		`(?i)([\w-]*(` + alternation + `)[\w-]*\s*` + assignOp + `\s*)([A-Za-z0-9+/_-][A-Za-z0-9+/_=-]{11,})`, //nolint:mnd
 	)
 
 	return &redactor{detector: detector, patterns: patterns, unquotedAssignmentPattern: unquotedAssignmentPattern}, nil
