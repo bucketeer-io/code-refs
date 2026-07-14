@@ -27,9 +27,12 @@ var authHeaderPattern = secretPattern{
 	replacement: "$1 " + redactedPlaceholder,
 }
 
-// Passwords in URL userinfo, e.g. postgres://admin:hunter2@db:5432/prod
+// Passwords in URL userinfo, e.g. postgres://admin:hunter2@db:5432/prod.
+// The password class allows '@' (userinfo ends at the last '@' before the
+// path) so a password containing a raw '@' is not partially leaked; quotes
+// stop the match at the end of a string literal.
 var urlCredentialsPattern = secretPattern{
-	regex:       regexp.MustCompile(`(://[^:/?#@\s]+:)[^@/?#\s]+@`),
+	regex:       regexp.MustCompile(`(://[^:/?#@\s]+:)[^/?#\s"'` + "`" + `]+@`),
 	replacement: "$1" + redactedPlaceholder + "@",
 }
 

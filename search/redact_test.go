@@ -104,6 +104,13 @@ func Test_redactSecrets(t *testing.T) {
 			want: `db = "postgres://admin:[REDACTED]@db.internal:5432/prod"`,
 		},
 		{
+			// userinfo ends at the last @ before the path, so none of the
+			// password may leak
+			name: "password containing @ in connection url",
+			line: `db = "postgres://admin:p@ssw0rd9x@db.internal:5432/prod"`,
+			want: `db = "postgres://admin:[REDACTED]@db.internal:5432/prod"`,
+		},
+		{
 			name: "url without credentials is unchanged",
 			line: `endpoint = "https://api.example.com:8443/v1/health"`,
 			want: `endpoint = "https://api.example.com:8443/v1/health"`,

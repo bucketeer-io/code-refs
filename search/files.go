@@ -64,14 +64,26 @@ func readFileLines(path string) ([]string, error) {
 	return lines, nil
 }
 
-// isText reports whether a significant prefix of s looks like correct UTF-8
-// without control characters; that is, if it is likely human-readable text.
-// Adapted from golang.org/x/tools/godoc/util (BSD-3-Clause), whose module is
-// deprecated and frozen.
-func isText(s []byte) bool {
+// isText reports whether the first kilobyte of the file (its lines joined by
+// newlines) looks like correct UTF-8 without control characters; that is, if
+// it is likely human-readable text. Taking the lines directly avoids copying
+// the whole file just to inspect its prefix. Adapted from
+// golang.org/x/tools/godoc/util (BSD-3-Clause), whose module is deprecated
+// and frozen.
+func isText(lines []string) bool {
 	const maxCheck = 1024 // at least utf8.UTFMax
-	if len(s) > maxCheck {
-		s = s[0:maxCheck]
+	s := make([]byte, 0, maxCheck)
+	for i, line := range lines {
+		if i > 0 {
+			s = append(s, '\n')
+		}
+		if len(line) > maxCheck-len(s) {
+			line = line[:maxCheck-len(s)]
+		}
+		s = append(s, line...)
+		if len(s) >= maxCheck {
+			break
+		}
 	}
 	for i, c := range string(s) {
 		if i+utf8.UTFMax > len(s) {
@@ -126,7 +138,7 @@ func readFiles(ctx context.Context, files chan<- file, workspace string) error {
 		}
 
 		// only read text files
-		if !isText([]byte(strings.Join(lines, "\n"))) {
+		if !isText(lines) {
 			return nil
 		}
 
