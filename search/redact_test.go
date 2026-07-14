@@ -298,7 +298,7 @@ func Test_newRedactor_invalidPattern(t *testing.T) {
 	}
 }
 
-func Test_hunkForLine_redactsSecrets(t *testing.T) {
+func Test_aggregateHunksForFlag_redactsSecrets(t *testing.T) {
 	secretLine := `apiKey := "0123456789abcdef"`
 	lines := []string{secretLine, delimitedTestFlagKey, secretLine}
 
@@ -310,15 +310,15 @@ func Test_hunkForLine_redactsSecrets(t *testing.T) {
 		Element:  NewElementMatcher("my-project", ``, `"`, []string{testFlagKey}, nil),
 	}
 	f := file{lines: lines}
-	got := f.hunkForLine(testFlagKey, 1, matcher)
-	require.NotNil(t, got)
-	require.Equal(t, `apiKey := "[REDACTED]"`+"\n"+delimitedTestFlagKey+"\n"+`apiKey := "[REDACTED]"`, got.Lines)
+	got := f.aggregateHunksForFlag(testFlagKey, matcher, []int{1})
+	require.Len(t, got, 1)
+	require.Equal(t, `apiKey := "[REDACTED]"`+"\n"+delimitedTestFlagKey+"\n"+`apiKey := "[REDACTED]"`, got[0].Lines)
 	// the file's cached lines must not be modified by redaction
 	require.Equal(t, secretLine, f.lines[0])
 
 	// with redaction disabled, lines are sent as-is
 	matcher.redactor = nil
-	got = f.hunkForLine(testFlagKey, 1, matcher)
-	require.NotNil(t, got)
-	require.Equal(t, secretLine+"\n"+delimitedTestFlagKey+"\n"+secretLine, got.Lines)
+	got = f.aggregateHunksForFlag(testFlagKey, matcher, []int{1})
+	require.Len(t, got, 1)
+	require.Equal(t, secretLine+"\n"+delimitedTestFlagKey+"\n"+secretLine, got[0].Lines)
 }
