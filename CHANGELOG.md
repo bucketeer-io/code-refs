@@ -2,6 +2,19 @@
 
 All notable changes to the ld-find-code-refs program will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [0.0.4](https://github.com/bucketeer-io/code-refs/compare/v0.0.3...v0.0.4) (2026-07-15)
+
+
+### Features
+
+* add secret redaction feature to replace sensitive values ([#14](https://github.com/bucketeer-io/code-refs/issues/14)) ([efa4995](https://github.com/bucketeer-io/code-refs/commit/efa4995837a59894fe50a519599c28c7a976d26e))
+
+
+### Miscellaneous
+
+* installation guideline ([#12](https://github.com/bucketeer-io/code-refs/issues/12)) ([6db6b99](https://github.com/bucketeer-io/code-refs/commit/6db6b9915c010020198e02248cd58fdbe3a4dec9))
+* remove vendor dir ([#15](https://github.com/bucketeer-io/code-refs/issues/15)) ([1e3a49c](https://github.com/bucketeer-io/code-refs/commit/1e3a49c67f246b9cfc40d1fdaf4f134819111605))
+
 ## [0.0.3](https://github.com/bucketeer-io/code-refs/compare/v0.0.2...v0.0.3) (2025-06-12)
 
 
