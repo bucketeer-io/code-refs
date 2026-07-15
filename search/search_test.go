@@ -80,7 +80,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 0,
 			flagKey: testFlagKey,
 			lines:   []string{delimitedTestFlagKey},
-			want:    makeHunkPtr(1, delimitedTestFlagKey),
+			want:    makeRawHunkPtr(1, delimitedTestFlagKey),
 		},
 		{
 			name: "matches no context lines",
@@ -91,7 +91,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 0,
 			flagKey: testFlagKey,
 			lines:   []string{delimitedTestFlagKey},
-			want:    makeHunkPtr(1, delimitedTestFlagKey),
+			want:    makeRawHunkPtr(1),
 		},
 		{
 			name: "matches no context lines without delimiters",
@@ -102,7 +102,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 0,
 			flagKey: testFlagKey,
 			lines:   []string{testFlagKey},
-			want:    makeHunkPtr(1),
+			want:    makeRawHunkPtr(1),
 		},
 		{
 			name: "matches with alias",
@@ -113,7 +113,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 0,
 			flagKey: testFlagKey,
 			lines:   []string{testFlagAlias},
-			want:    withAliases(makeHunkPtr(1), testFlagAlias),
+			want:    withAliases(makeRawHunkPtr(1), testFlagAlias),
 		},
 		{
 			name: "matches with aliases",
@@ -124,7 +124,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 0,
 			flagKey: testFlagKey,
 			lines:   []string{testFlagAlias + " " + testFlagAlias2},
-			want:    withAliases(makeHunkPtr(1), testFlagAlias, testFlagAlias2),
+			want:    withAliases(makeRawHunkPtr(1), testFlagAlias, testFlagAlias2),
 		},
 		{
 			name: "matches with line",
@@ -135,7 +135,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 1,
 			flagKey: testFlagKey,
 			lines:   []string{"", testFlagKey, ""},
-			want:    makeHunkPtr(2, testFlagKey),
+			want:    makeRawHunkPtr(2, testFlagKey),
 		},
 		{
 			name: "matches with context lines",
@@ -146,10 +146,10 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 1,
 			flagKey: testFlagKey,
 			lines:   []string{"", testFlagKey, ""},
-			want:    makeHunkPtr(1, "", testFlagKey, ""),
+			want:    makeRawHunkPtr(1, "", testFlagKey, ""),
 		},
 		{
-			name: "truncates long line",
+			name: "does not truncate long line, truncation happens after hunks are merged",
 			matcher: Matcher{
 				ctxLines: 0,
 				Element:  NewElementMatcher("my-project", ``, ``, []string{testFlagKey}, nil),
@@ -157,7 +157,7 @@ func Test_hunkForLine(t *testing.T) {
 			lineNum: 0,
 			flagKey: testFlagKey,
 			lines:   []string{testFlagKey + strings.Repeat("a", maxLineCharCount)},
-			want:    makeHunkPtr(1, testFlagKey+strings.Repeat("a", maxLineCharCount-len(testFlagKey))+"…"),
+			want:    makeRawHunkPtr(1, testFlagKey+strings.Repeat("a", maxLineCharCount)),
 		},
 	}
 
@@ -247,6 +247,17 @@ func Test_aggregateHunksForFlag(t *testing.T) {
 				makeHunk(1, delimitedTestFlagKey, "", delimitedTestFlagKey, "", delimitedTestFlagKey),
 			},
 		},
+		{
+			name: "truncates long lines",
+			matcher: Matcher{
+				ctxLines: 0,
+				Element:  NewElementMatcher("default", ``, ``, []string{testFlagKey}, nil),
+			},
+			lines: []string{testFlagKey + strings.Repeat("a", maxLineCharCount)},
+			want: []bucketeer.HunkRep{
+				makeHunk(1, testFlagKey+strings.Repeat("a", maxLineCharCount-len(testFlagKey))+"…"),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -271,53 +282,53 @@ func Test_mergeHunks(t *testing.T) {
 	}{
 		{
 			name:  "combine adjacent hunks",
-			hunk1: makeHunk(1, "a", "b", "c"),
-			hunk2: makeHunk(4, "d", "e", "f"),
-			want:  []bucketeer.HunkRep{makeHunk(1, "a", "b", "c", "d", "e", "f")},
+			hunk1: makeRawHunk(1, "a", "b", "c"),
+			hunk2: makeRawHunk(4, "d", "e", "f"),
+			want:  []bucketeer.HunkRep{makeRawHunk(1, "a", "b", "c", "d", "e", "f")},
 		},
 		{
 			name:  "combine overlapping hunks",
-			hunk1: makeHunk(1, "a", "b", "c"),
-			hunk2: makeHunk(3, "c", "d", "e"),
-			want:  []bucketeer.HunkRep{makeHunk(1, "a", "b", "c", "d", "e")},
+			hunk1: makeRawHunk(1, "a", "b", "c"),
+			hunk2: makeRawHunk(3, "c", "d", "e"),
+			want:  []bucketeer.HunkRep{makeRawHunk(1, "a", "b", "c", "d", "e")},
 		},
 		{
 			name:  "combine overlapping hunks provided in the wrong order",
-			hunk1: makeHunk(3, "c", "d", "e"),
-			hunk2: makeHunk(1, "a", "b", "c"),
-			want:  []bucketeer.HunkRep{makeHunk(1, "a", "b", "c", "d", "e")},
+			hunk1: makeRawHunk(3, "c", "d", "e"),
+			hunk2: makeRawHunk(1, "a", "b", "c"),
+			want:  []bucketeer.HunkRep{makeRawHunk(1, "a", "b", "c", "d", "e")},
 		},
 		{
 			name:  "combine same hunk",
-			hunk1: makeHunk(1, "a", "b", "c"),
-			hunk2: makeHunk(1, "a", "b", "c"),
-			want:  []bucketeer.HunkRep{makeHunk(1, "a", "b", "c")},
+			hunk1: makeRawHunk(1, "a", "b", "c"),
+			hunk2: makeRawHunk(1, "a", "b", "c"),
+			want:  []bucketeer.HunkRep{makeRawHunk(1, "a", "b", "c")},
 		},
 		{
 			name:  "combine subset hunk",
-			hunk1: makeHunk(1, "a", "b", "c", "d", "e"),
-			hunk2: makeHunk(3, "c", "d"),
-			want:  []bucketeer.HunkRep{makeHunk(1, "a", "b", "c", "d", "e")},
+			hunk1: makeRawHunk(1, "a", "b", "c", "d", "e"),
+			hunk2: makeRawHunk(3, "c", "d"),
+			want:  []bucketeer.HunkRep{makeRawHunk(1, "a", "b", "c", "d", "e")},
 		},
 		{
 			// if the hunks do not overlap and are not adjacent, expect just the first hunk to be returned
 			name:  "do not combine disjoint hunks",
-			hunk1: makeHunk(1, "a", "b", "c"),
-			hunk2: makeHunk(5, "e", "f", "g"),
-			want:  []bucketeer.HunkRep{makeHunk(1, "a", "b", "c"), makeHunk(5, "e", "f", "g")},
+			hunk1: makeRawHunk(1, "a", "b", "c"),
+			hunk2: makeRawHunk(5, "e", "f", "g"),
+			want:  []bucketeer.HunkRep{makeRawHunk(1, "a", "b", "c"), makeRawHunk(5, "e", "f", "g")},
 		},
 		{
 			// if the hunks are provided out of order, expect both hunks to be returned in the correct order
 			name:  "do not combine hunks provided out of order",
-			hunk1: makeHunk(5, "e", "f", "g"),
-			hunk2: makeHunk(1, "a", "b", "c"),
-			want:  []bucketeer.HunkRep{makeHunk(1, "a", "b", "c"), makeHunk(5, "e", "f", "g")},
+			hunk1: makeRawHunk(5, "e", "f", "g"),
+			hunk2: makeRawHunk(1, "a", "b", "c"),
+			want:  []bucketeer.HunkRep{makeRawHunk(1, "a", "b", "c"), makeRawHunk(5, "e", "f", "g")},
 		},
 		{
 			name:  "does not combine with no context lines",
-			hunk1: makeHunk(1),
-			hunk2: makeHunk(2),
-			want:  []bucketeer.HunkRep{makeHunk(1), makeHunk(2)},
+			hunk1: makeRawHunk(1),
+			hunk2: makeRawHunk(2),
+			want:  []bucketeer.HunkRep{makeRawHunk(1), makeRawHunk(2)},
 		},
 	}
 
@@ -435,6 +446,19 @@ func withFlagKey(hunk *bucketeer.HunkRep, flagKey string) *bucketeer.HunkRep {
 func makeHunkPtr(startingLineNumber int, lines ...string) *bucketeer.HunkRep {
 	hunk := makeHunk(startingLineNumber, lines...)
 	return &hunk
+}
+
+// raw hunks, as produced by hunkForLine and mergeHunks, have no content hash:
+// it is computed by finalizeHunk after redaction and truncation
+func makeRawHunkPtr(startingLineNumber int, lines ...string) *bucketeer.HunkRep {
+	hunk := makeRawHunk(startingLineNumber, lines...)
+	return &hunk
+}
+
+func makeRawHunk(startingLineNumber int, lines ...string) bucketeer.HunkRep {
+	hunk := makeHunk(startingLineNumber, lines...)
+	hunk.ContentHash = ""
+	return hunk
 }
 
 func makeHunk(startingLineNumber int, lines ...string) bucketeer.HunkRep {

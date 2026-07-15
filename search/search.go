@@ -41,7 +41,9 @@ type file struct {
 	fileExt string
 }
 
-// hunkForLine returns a matching code reference for a given flag key on a line
+// hunkForLine returns a matching code reference for a given flag key on a
+// line. The hunk's lines are raw: redaction, truncation, and content hashing
+// happen in finalizeHunk once overlapping hunks have been merged.
 func (f file) hunkForLine(flagKey string, lineNum int, matcher Matcher) *bucketeer.HunkRep {
 	line := f.lines[lineNum]
 	ctxLines := matcher.ctxLines
@@ -52,7 +54,7 @@ func (f file) hunkForLine(flagKey string, lineNum int, matcher Matcher) *buckete
 	}
 
 	startingLineNum := lineNum
-	var hunkLines []string
+	lines := ""
 	if ctxLines >= 0 {
 		startingLineNum -= ctxLines
 		if startingLineNum < 0 {
@@ -60,28 +62,37 @@ func (f file) hunkForLine(flagKey string, lineNum int, matcher Matcher) *buckete
 		}
 		endingLineNum := lineNum + ctxLines + 1
 		if endingLineNum >= len(f.lines) {
-			hunkLines = f.lines[startingLineNum:]
-		} else {
-			hunkLines = f.lines[startingLineNum:endingLineNum]
+			endingLineNum = len(f.lines)
 		}
+		lines = strings.Join(f.lines[startingLineNum:endingLineNum], "\n")
 	}
-
-	for i, line := range hunkLines {
-		hunkLines[i] = truncateLine(line, maxLineCharCount)
-	}
-
-	lines := strings.Join(hunkLines, "\n")
-	contentHash := getContentHash(lines)
 
 	ret := bucketeer.HunkRep{
 		FlagKey:            flagKey,
 		StartingLineNumber: startingLineNum + 1,
 		Lines:              lines,
 		Aliases:            aliasMatches,
-		ContentHash:        contentHash,
 		FileExt:            f.fileExt,
 	}
 	return &ret
+}
+
+// finalizeHunk redacts, truncates, and hashes a hunk's lines. It runs once
+// per merged hunk so overlapping context windows are not redacted repeatedly.
+// Redaction stays upstream of truncation so a secret is never cut in half
+// before the detector sees it.
+func finalizeHunk(hunk *bucketeer.HunkRep, r *redactor) {
+	if hunk.Lines != "" {
+		lines := strings.Split(hunk.Lines, "\n")
+		if r != nil {
+			lines = r.redactHunk(lines)
+		}
+		for i, line := range lines {
+			lines[i] = truncateLine(line, maxLineCharCount)
+		}
+		hunk.Lines = strings.Join(lines, "\n")
+	}
+	hunk.ContentHash = getContentHash(hunk.Lines)
 }
 
 // aggregateHunksForFlag finds all references in a file, and combines matches if their context lines overlap
@@ -98,6 +109,9 @@ func (f file) aggregateHunksForFlag(flagKey string, matcher Matcher, lineNumbers
 				hunksForFlag = append(hunksForFlag, *match)
 			}
 		}
+	}
+	for i := range hunksForFlag {
+		finalizeHunk(&hunksForFlag[i], matcher.redactor)
 	}
 	return hunksForFlag
 }
@@ -156,16 +170,13 @@ func mergeHunks(a, b bucketeer.HunkRep) []bucketeer.HunkRep {
 	}
 
 	combinedLines := append(aLines, bLines[overlap:]...)
-	lines := strings.Join(combinedLines, "\n")
-	contentHash := getContentHash(lines)
 
 	return []bucketeer.HunkRep{
 		{
 			StartingLineNumber: a.StartingLineNumber,
-			Lines:              lines,
+			Lines:              strings.Join(combinedLines, "\n"),
 			FlagKey:            a.FlagKey,
 			Aliases:            helpers.Dedupe(append(a.Aliases, b.Aliases...)),
-			ContentHash:        contentHash,
 		},
 	}
 }

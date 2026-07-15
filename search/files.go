@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/monochromegane/go-gitignore"
-	"golang.org/x/tools/godoc/util"
 
 	"github.com/bucketeer-io/code-refs/internal/validation"
 )
@@ -64,9 +64,43 @@ func readFileLines(path string) ([]string, error) {
 	return lines, nil
 }
 
+// isText reports whether the first kilobyte of the file (its lines joined by
+// newlines) looks like correct UTF-8 without control characters; that is, if
+// it is likely human-readable text. Taking the lines directly avoids copying
+// the whole file just to inspect its prefix. Adapted from
+// golang.org/x/tools/godoc/util (BSD-3-Clause), whose module is deprecated
+// and frozen.
+func isText(lines []string) bool {
+	const maxCheck = 1024 // at least utf8.UTFMax
+	s := make([]byte, 0, maxCheck)
+	for i, line := range lines {
+		if i > 0 {
+			s = append(s, '\n')
+		}
+		if len(line) > maxCheck-len(s) {
+			line = line[:maxCheck-len(s)]
+		}
+		s = append(s, line...)
+		if len(s) >= maxCheck {
+			break
+		}
+	}
+	for i, c := range string(s) {
+		if i+utf8.UTFMax > len(s) {
+			// last char may be incomplete - ignore
+			break
+		}
+		if c == 0xFFFD || c < ' ' && c != '\n' && c != '\t' && c != '\f' {
+			// decoding error or control character - not a text file
+			return false
+		}
+	}
+	return true
+}
+
 func readFiles(ctx context.Context, files chan<- file, workspace string) error {
 	defer close(files)
-	ignoreFiles := []string{".gitignore", ".ignore"}
+	ignoreFiles := []string{".gitignore", ".ignore", ".ldignore"}
 	allIgnores := newIgnore(workspace, ignoreFiles)
 	workspace = filepath.ToSlash(workspace)
 
@@ -104,7 +138,7 @@ func readFiles(ctx context.Context, files chan<- file, workspace string) error {
 		}
 
 		// only read text files
-		if !util.IsText([]byte(strings.Join(lines, "\n"))) {
+		if !isText(lines) {
 			return nil
 		}
 

@@ -99,8 +99,8 @@ func fetchExistingReferences(
 	opts options.Options,
 	bucketeerApi bucketeer.ApiClient,
 	refs []bucketeer.ReferenceHunksRep,
-) map[string]bucketeer.CodeReference {
-	existingRefs := make(map[string]bucketeer.CodeReference)
+) map[string][]bucketeer.CodeReference {
+	existingRefs := make(map[string][]bucketeer.CodeReference)
 	flagCounts := aggregateFeatureFlags(refs)
 
 	for flag := range flagCounts {
@@ -113,17 +113,33 @@ func fetchExistingReferences(
 		}
 
 		for _, ref := range codeRefs {
-			existingRefs[ref.ContentHash] = ref
+			// the list endpoint is queried by featureId; tolerate responses
+			// that omit the field in items so keys still match scanned refs
+			if ref.FeatureID == "" {
+				ref.FeatureID = flag
+			}
+			key := referenceKey(ref)
+			existingRefs[key] = append(existingRefs[key], ref)
 		}
 	}
 	return existingRefs
+}
+
+// referenceKey identifies a code reference during reconciliation. ContentHash
+// alone can collide: hunks whose secrets are redacted to identical text, or
+// copy-pasted code, hash the same, so the flag key and file path are included.
+// References that still share a key (identical snippets of one flag in one
+// file, or every hunk when contextLines < 0) are kept as a slice and matched
+// one-to-one so duplicates are neither overwritten nor leaked from deletion.
+func referenceKey(ref bucketeer.CodeReference) string {
+	return ref.FeatureID + "\x00" + ref.FilePath + "\x00" + ref.ContentHash
 }
 
 func processNewReferences(
 	opts options.Options,
 	bucketeerApi bucketeer.ApiClient,
 	refs []bucketeer.ReferenceHunksRep,
-	existingRefs map[string]bucketeer.CodeReference,
+	existingRefs map[string][]bucketeer.CodeReference,
 	branchName, revision, repoType string,
 ) {
 	for _, ref := range refs {
@@ -158,15 +174,21 @@ func createCodeReference(opts options.Options,
 func updateOrCreateReference(opts options.Options,
 	bucketeerApi bucketeer.ApiClient,
 	codeRef bucketeer.CodeReference,
-	existingRefs map[string]bucketeer.CodeReference,
+	existingRefs map[string][]bucketeer.CodeReference,
 ) {
-	if existing, exists := existingRefs[codeRef.ContentHash]; exists {
+	key := referenceKey(codeRef)
+	if refs := existingRefs[key]; len(refs) > 0 {
+		existing := refs[0]
 		log.Info.Printf("updating code reference in Bucketeer: id: %s, content hash: %s", existing.ID, codeRef.ContentHash)
 		err := bucketeerApi.UpdateCodeReference(context.Background(), opts, existing.ID, codeRef)
 		if err != nil {
 			helpers.FatalServiceError(fmt.Errorf("error updating code reference in Bucketeer: %w", err), opts.IgnoreServiceErrors)
 		}
-		delete(existingRefs, codeRef.ContentHash)
+		if len(refs) == 1 {
+			delete(existingRefs, key)
+		} else {
+			existingRefs[key] = refs[1:]
+		}
 	} else {
 		err := bucketeerApi.CreateCodeReference(context.Background(), opts, codeRef)
 		if err != nil {
@@ -175,14 +197,16 @@ func updateOrCreateReference(opts options.Options,
 	}
 }
 
-func deleteStaleReferences(opts options.Options, bucketeerApi bucketeer.ApiClient, existingRefs map[string]bucketeer.CodeReference) {
-	for _, ref := range existingRefs {
-		if ref.RepositoryOwner == opts.RepoOwner && ref.RepositoryName == opts.RepoName {
-			err := bucketeerApi.DeleteCodeReference(context.Background(), opts, ref.ID)
-			if err != nil {
-				helpers.FatalServiceError(fmt.Errorf("error deleting code reference from Bucketeer: %w", err), opts.IgnoreServiceErrors)
+func deleteStaleReferences(opts options.Options, bucketeerApi bucketeer.ApiClient, existingRefs map[string][]bucketeer.CodeReference) {
+	for _, refs := range existingRefs {
+		for _, ref := range refs {
+			if ref.RepositoryOwner == opts.RepoOwner && ref.RepositoryName == opts.RepoName {
+				err := bucketeerApi.DeleteCodeReference(context.Background(), opts, ref.ID)
+				if err != nil {
+					helpers.FatalServiceError(fmt.Errorf("error deleting code reference from Bucketeer: %w", err), opts.IgnoreServiceErrors)
+				}
+				log.Info.Printf("deleted code reference from Bucketeer: %+v", ref)
 			}
-			log.Info.Printf("deleted code reference from Bucketeer: %+v", ref)
 		}
 	}
 }

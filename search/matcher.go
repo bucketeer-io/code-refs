@@ -11,6 +11,7 @@ import (
 type Matcher struct {
 	Element  ElementMatcher
 	ctxLines int
+	redactor *redactor
 }
 
 func NewEnvironmentMatcher(opts options.Options, dir string, flagKeys []string) Matcher {
@@ -23,8 +24,19 @@ func NewEnvironmentMatcher(opts options.Options, dir string, flagKeys []string) 
 
 	element := NewElementMatcher("", opts.Subdirectory, delimiters, flagKeys, aliasesByFlagKey)
 
+	var r *redactor
+	// with contextLines < 0 no source code is sent to Bucketeer, so there is
+	// nothing to redact and no need to build the gitleaks detector
+	if opts.RedactSecrets && opts.ContextLines >= 0 {
+		r, err = newRedactor(opts.RedactPatterns, opts.RedactKeywords)
+		if err != nil {
+			log.Error.Fatalf("failed to configure secret redaction: %s", err)
+		}
+	}
+
 	return Matcher{
 		ctxLines: opts.ContextLines,
+		redactor: r,
 		Element:  element,
 	}
 }
