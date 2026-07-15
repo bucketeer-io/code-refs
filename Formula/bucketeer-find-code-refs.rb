@@ -5,40 +5,40 @@
 class BucketeerFindCodeRefs < Formula
   desc "Bucketeer Code References. This tool will find and send feature flag code references to Bucketeer's backend."
   homepage "https://bucketeer.io"
-  version "0.0.3"
+  version "0.0.4"
   license "Apache 2.0"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.3/code-refs_0.0.3_darwin_amd64.tar.gz"
-      sha256 "34c6edd0c737edfe4b9fa37b82da13f46e2b27f263bfadaef069ef5205efc26d"
+      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.4/code-refs_0.0.4_darwin_amd64.tar.gz"
+      sha256 "429629c417699e4a824f878aae4df4bef33ca0c95923f70f9f4c32212e1f4627"
 
-      def install
+      define_method(:install) do
         bin.install "bucketeer-find-code-refs"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.3/code-refs_0.0.3_darwin_arm64.tar.gz"
-      sha256 "286418df0cf29fee331cc8de557e6f768046fa6ee6cf3808f4124dcb78d064d3"
+      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.4/code-refs_0.0.4_darwin_arm64.tar.gz"
+      sha256 "48ded3ab9d9885286267b84654560d79427df88008ddf857e181e10912d0dc3a"
 
-      def install
+      define_method(:install) do
         bin.install "bucketeer-find-code-refs"
       end
     end
   end
 
   on_linux do
-    if Hardware::CPU.intel? and Hardware::CPU.is_64_bit?
-      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.3/code-refs_0.0.3_linux_amd64.tar.gz"
-      sha256 "58736b5dc1bca551cdbc44f28a67e28efcfcb8b2cee1dcfd05c9778bbfa312e5"
-      def install
+    if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
+      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.4/code-refs_0.0.4_linux_amd64.tar.gz"
+      sha256 "6b6a6eabceae9a169eb2446dfe7244cbbf3cfde9c837fe20301ff6585f1bc233"
+      define_method(:install) do
         bin.install "bucketeer-find-code-refs"
       end
     end
-    if Hardware::CPU.arm? and Hardware::CPU.is_64_bit?
-      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.3/code-refs_0.0.3_linux_arm64.tar.gz"
-      sha256 "ffd2cf2c81717ffaa8885688e5f106af31dad884a21da51ff9915d14eafc4479"
-      def install
+    if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+      url "https://github.com/bucketeer-io/code-refs/releases/download/v0.0.4/code-refs_0.0.4_linux_arm64.tar.gz"
+      sha256 "179ebb22954f16d3d9d0e37fe59e6d317c5c6e9bb012b403617fedd07868c464"
+      define_method(:install) do
         bin.install "bucketeer-find-code-refs"
       end
     end
