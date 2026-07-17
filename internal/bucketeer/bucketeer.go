@@ -134,6 +134,8 @@ func (c *apiClient) do(req *http.Request) (*http.Response, error) {
 			return err
 		}
 
+		log.Debug.Printf("response status %d %s for %s %s", resp.StatusCode, http.StatusText(resp.StatusCode), req.Method, req.URL)
+
 		if resp.StatusCode >= serverErrorMinCode {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
