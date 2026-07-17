@@ -98,7 +98,7 @@ func isText(lines []string) bool {
 	return true
 }
 
-func readFiles(ctx context.Context, files chan<- file, workspace string) error {
+func readFiles(ctx context.Context, files chan<- file, workspace, subdirectory string) error {
 	defer close(files)
 	ignoreFiles := []string{".gitignore", ".ignore", ".ldignore"}
 	allIgnores := newIgnore(workspace, ignoreFiles)
@@ -142,7 +142,7 @@ func readFiles(ctx context.Context, files chan<- file, workspace string) error {
 			return nil
 		}
 
-		relativePath := strings.TrimPrefix(path, workspace+"/")
+		relativePath := resolvePath(path, workspace, subdirectory)
 		files <- file{
 			path:    relativePath,
 			lines:   lines,
@@ -152,4 +152,16 @@ func readFiles(ctx context.Context, files chan<- file, workspace string) error {
 	}
 
 	return filepath.Walk(workspace, readFile)
+}
+
+// resolvePath makes path relative to the repo root rather than the searched
+// workspace, so paths stay correct when a subdirectory is configured (the
+// workspace is then <root>/<subdirectory>).
+func resolvePath(path, workspace, subdirectory string) string {
+	dir := workspace
+	if subdirectory != "" {
+		dir = strings.TrimSuffix(workspace, "/"+subdirectory)
+	}
+
+	return strings.TrimPrefix(path, dir+"/")
 }
