@@ -15,6 +15,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # goreleaser derives the version from git tags; a shallow checkout
+          # has none (breaks workflow_dispatch re-runs of a release).
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v4
