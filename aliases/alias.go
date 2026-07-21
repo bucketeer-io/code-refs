@@ -226,7 +226,12 @@ func cacheFilepathGlob(dir, glob string) ([]string, error) {
 	}
 
 	matches, err := doublestar.FilepathGlob(absGlob)
+	if err != nil {
+		// Don't cache failures: a cache hit always returns a nil error, which
+		// would silently mask the original glob error on any later call.
+		return nil, err
+	}
 	globCache[absGlob] = matches
 
-	return matches, err
+	return matches, nil
 }

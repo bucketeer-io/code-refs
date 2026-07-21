@@ -160,7 +160,12 @@ func readFiles(ctx context.Context, files chan<- file, workspace, subdirectory s
 func resolvePath(path, workspace, subdirectory string) string {
 	dir := workspace
 	if subdirectory != "" {
-		dir = strings.TrimSuffix(workspace, "/"+subdirectory)
+		// Normalize the same way filepath.Join normalized subdirectory when
+		// building workspace, so a trailing slash or "./" prefix doesn't
+		// prevent the suffix match below (which would silently drop the
+		// subdirectory from the resolved path).
+		cleanSubdirectory := filepath.ToSlash(filepath.Clean(subdirectory))
+		dir = strings.TrimSuffix(workspace, "/"+cleanSubdirectory)
 	}
 
 	return strings.TrimPrefix(path, dir+"/")

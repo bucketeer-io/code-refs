@@ -94,6 +94,24 @@ func Test_resolvePath(t *testing.T) {
 		workspace:    "/path/to/workspace",
 		subdirectory: "",
 		expectedPath: "file.txt",
+	}, {
+		// Mirrors the runtime shape: scan.go builds workspace via
+		// filepath.Join(dir, opts.Subdirectory), so workspace already
+		// includes the subdirectory suffix that must be trimmed back off.
+		name:         "workspace includes subdirectory suffix",
+		path:         "/path/to/workspace/subdir/internal/file.txt",
+		workspace:    "/path/to/workspace/subdir",
+		subdirectory: "subdir",
+		expectedPath: "subdir/internal/file.txt",
+	}, {
+		// Regression test: a trailing slash on the subdirectory option must
+		// not prevent the suffix match, or the subdirectory prefix is
+		// silently dropped from every resolved path.
+		name:         "subdirectory option has a trailing slash",
+		path:         "/path/to/workspace/subdir/internal/file.txt",
+		workspace:    "/path/to/workspace/subdir",
+		subdirectory: "subdir/",
+		expectedPath: "subdir/internal/file.txt",
 	}}
 
 	for _, tc := range testCases {

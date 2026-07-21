@@ -207,7 +207,7 @@ func (c *Client) RemoteBranches() (branches map[string]bool, err error) {
 	}
 
 	for _, r := range remotes {
-		refList, err := r.List(&git.ListOptions{Auth: auth})
+		refList, err := r.List(&git.ListOptions{Auth: remoteAuth(r, auth)})
 		if err != nil {
 			return branches, err
 		}
@@ -226,6 +226,26 @@ func (c *Client) RemoteBranches() (branches map[string]bool, err error) {
 	// the current branch should be in the list of remote branches
 	branches[c.GitBranch] = true
 	return branches, nil
+}
+
+// remoteAuth returns auth for r only if r's URL uses HTTP(S). go-git's
+// transports type-assert Auth to a protocol-specific interface (e.g. the ssh
+// package requires ssh.AuthMethod), so handing an http.BasicAuth to an SSH
+// remote fails with transport.ErrInvalidAuthMethod instead of just listing
+// unauthenticated. go-git only ever consults a remote's first configured URL
+// (see Remote.list), so that's the only one that needs checking.
+func remoteAuth(r *git.Remote, auth transport.AuthMethod) transport.AuthMethod {
+	if auth == nil {
+		return nil
+	}
+	urls := r.Config().URLs
+	if len(urls) == 0 {
+		return nil
+	}
+	if strings.HasPrefix(urls[0], "http://") || strings.HasPrefix(urls[0], "https://") {
+		return auth
+	}
+	return nil
 }
 
 // type CommitData struct {
