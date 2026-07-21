@@ -202,7 +202,7 @@ func processFiles(ctx context.Context, files <-chan file, references chan<- buck
 	w.Wait()
 }
 
-func SearchForRefs(directory string, matcher Matcher) ([]bucketeer.ReferenceHunksRep, error) {
+func SearchForRefs(directory, subdirectory string, matcher Matcher) ([]bucketeer.ReferenceHunksRep, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	files := make(chan file)
@@ -210,7 +210,7 @@ func SearchForRefs(directory string, matcher Matcher) ([]bucketeer.ReferenceHunk
 	// Start workers to process files asynchronously as they are written to the files channel
 	go processFiles(ctx, files, references, matcher)
 
-	err := readFiles(ctx, files, directory)
+	err := readFiles(ctx, files, directory, subdirectory)
 	if err != nil {
 		return nil, err
 	}

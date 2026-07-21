@@ -57,6 +57,15 @@ Flags:
 
 All command line flags are available as environment variables following the "upper snake case" format, with a prefix of `BUCKETEER_`. For example, the command line option `apiKey` may be set as an environment variable e.g. `export BUCKETEER_APIKEY = 'myTestToken'`. For multiple API keys, you can use comma-separated values: `export BUCKETEER_APIKEY = 'key1,key2,key3'`.
 
+### GitHub Actions
+
+When running inside GitHub Actions (`GITHUB_ACTIONS=true`), remote git operations used by branch pruning authenticate with the workflow's `GITHUB_TOKEN` environment variable if it is set. Provide it when scanning a private repository with `prune` enabled (the default), otherwise listing remote branches will fail:
+
+```yaml
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
 ## YAML
 
 A YAML file may be used to specify most command line arguments, as well as a number of additional options for advanced usage of `bucketeer-find-code-refs`. The configuration YAML file should be stored as `${dir}/.bucketeer/coderefs.yaml`.
