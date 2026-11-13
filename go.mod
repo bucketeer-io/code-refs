@@ -1,6 +1,6 @@
 module github.com/bucketeer-io/code-refs
 
-go 1.25.0
+go 1.26.11
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
